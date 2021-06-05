@@ -368,6 +368,7 @@ def sell_coins():
         BuyPrice = float(coins_bought[coin]['bought_at'])
         PriceChange = float((LastPrice - BuyPrice) / BuyPrice * 100)
         HoldTime = datetime.now().timestamp() - float(coins_bought[coin]['timestamp'])
+        if HoldTime < 0.0: HoldTime = datetime.now().timestamp() - float(coins_bought[coin]['timestamp']/1000)
         HoldTime = HoldTime/60.0
 
         # check that the price is above the take profit and readjust SL and TP accordingly if trialing stop loss used
