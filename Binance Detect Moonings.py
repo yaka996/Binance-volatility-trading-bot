@@ -384,9 +384,9 @@ def sell_coins():
         if (SELL_AFTER_DURATION > 0 and HoldTime >= SELL_AFTER_DURATION) or LastPrice < SL or LastPrice > TP and not USE_TRAILING_STOP_LOSS:
             if LastPrice < SL:
                 print(f"{txcolors.SELL_PROFIT if PriceChange >= 0. else txcolors.SELL_LOSS}SL reached, selling {coins_bought[coin]['volume']} {coin} - {BuyPrice} - {LastPrice} : {PriceChange-(TRADING_FEE*2):.2f}% Est:${(QUANTITY*(PriceChange-(TRADING_FEE*2)))/100:.2f} Held for {int(HoldTime)} minutes {txcolors.DEFAULT}")
-            if LastPrice > TP:
+            else if LastPrice > TP:
                 print(f"{txcolors.SELL_PROFIT if PriceChange >= 0. else txcolors.SELL_LOSS}TP reached, selling {coins_bought[coin]['volume']} {coin} - {BuyPrice} - {LastPrice} : {PriceChange-(TRADING_FEE*2):.2f}% Est:${(QUANTITY*(PriceChange-(TRADING_FEE*2)))/100:.2f} Held for {int(HoldTime)} minutes {txcolors.DEFAULT}")
-            if HoldTime >= SELL_AFTER_DURATION:
+            else if HoldTime >= SELL_AFTER_DURATION:
                 print(f"{txcolors.SELL_PROFIT if PriceChange >= 0. else txcolors.SELL_LOSS}HT reached, selling {coins_bought[coin]['volume']} {coin} - {BuyPrice} - {LastPrice} : {PriceChange-(TRADING_FEE*2):.2f}% Est:${(QUANTITY*(PriceChange-(TRADING_FEE*2)))/100:.2f} Held for {int(HoldTime)} minutes {txcolors.DEFAULT}")
             else:
                 print(f"{txcolors.SELL_PROFIT if PriceChange >= 0. else txcolors.SELL_LOSS}HT, TP or SL reached, selling {coins_bought[coin]['volume']} {coin} - {BuyPrice} - {LastPrice} : {PriceChange-(TRADING_FEE*2):.2f}% Est:${(QUANTITY*(PriceChange-(TRADING_FEE*2)))/100:.2f} Held for {int(HoldTime)} minutes {txcolors.DEFAULT}")
