@@ -66,10 +66,13 @@ class txcolors:
 
 
 # tracks profit/loss each session
-global session_profit, unrealised_percent, unrealised_percent_delay
+global session_profit, unrealised_percent, unrealised_percent_delay, is_bot_running, trades_won, trades_lost
 session_profit = 0
 unrealised_percent = 0
 unrealised_percent_delay = 0
+is_bot_running = True
+trades_won = 0
+trades_lost = 0
 
 global profit_history, trade_wins, trade_losses, profit_history_all, profit_total
 try:
@@ -435,11 +438,12 @@ def buy():
 
 def sell_coins():
     '''sell coins that have reached the STOP LOSS or TAKE PROFIT threshold'''
-    global hsp_head, session_profit, profit_history, coin_order_id, trade_wins, trade_losses, profit_history_all, profit_total
+    global hsp_head, session_profit, profit_history, coin_order_id, trade_wins, trade_losses, profit_history_all, profit_total, trades_won, trades_lost
     last_price = get_price(False) # don't populate rolling window
     #last_price = get_price(add_to_historical=True) # don't populate rolling window
     coins_sold = {}
 
+    check_total_session_profit(coins_bought, last_price)
     for coin in list(coins_bought):
         # define stop loss and take profit
         TP = float(coins_bought[coin]['bought_at']) + (float(coins_bought[coin]['bought_at']) * coins_bought[coin]['take_profit']) / 100
@@ -499,10 +503,14 @@ def sell_coins():
                 profit_history = profit_history + (PriceChange-(buyFee+sellFee))
                 profit_history_all = profit_history_all + (QUANTITY * (PriceChange-(buyFee+sellFee)) / 100)
                 profit_total = round(profit_total + profit, decimals())
+                
                 if BuyPrice >= LastPrice:
-                    trade_losses = trade_losses +1
+                    trade_wins += 1
+                    trades_won += 1
                 else:
-                 trade_wins = trade_wins +1
+                    trade_losses += 1
+                    trades_lost += 1
+
                 update_bot_stats()
 
             continue
@@ -516,6 +524,27 @@ def sell_coins():
     if hsp_head == 1 and len(coins_bought) == 0: print(f"No trade slots are currently in use")
 
     return coins_sold
+
+
+def check_total_session_profit(coins_bought, last_price):
+    
+    #TODO: Add to config
+    BUDGET = TRADE_SLOTS * QUANTITY
+
+    global session_profit, is_bot_running
+    
+    TotalSessionChange = session_profit
+    for coin in list(coins_bought):
+        LastPrice = float(last_price[coin]['price'])
+        BuyPrice = float(coins_bought[coin]['bought_at'])
+        PriceChange = float((LastPrice - BuyPrice) / BuyPrice * 100)
+
+        TotalSessionChange = float(TotalSessionChange + (PriceChange/TRADE_SLOTS))
+
+    print(f'ACTUAL session profit: {TotalSessionChange:.2f}% Est:${TotalSessionChange/100 * BUDGET:.2f}')
+    if SESSION_TPSL_OVERRIDE:
+        if (TotalSessionChange >= float(SESSION_TAKE_PROFIT) or TotalSessionChange <= float(SESSION_STOP_LOSS)):
+            is_bot_running = False
 
 
 def update_portfolio(orders, last_price, volume):
@@ -623,18 +652,30 @@ if __name__ == '__main__':
     QUANTITY = parsed_config['trading_options']['QUANTITY']
     TRADE_SLOTS = parsed_config['trading_options']['TRADE_SLOTS']
     FIATS = parsed_config['trading_options']['FIATS']
+    
     TIME_DIFFERENCE = parsed_config['trading_options']['TIME_DIFFERENCE']
     RECHECK_INTERVAL = parsed_config['trading_options']['RECHECK_INTERVAL']
+    
     CHANGE_IN_PRICE = parsed_config['trading_options']['CHANGE_IN_PRICE']
     STOP_LOSS = parsed_config['trading_options']['STOP_LOSS']
     TAKE_PROFIT = parsed_config['trading_options']['TAKE_PROFIT']
+    
     CUSTOM_LIST = parsed_config['trading_options']['CUSTOM_LIST']
     TICKERS_LIST = parsed_config['trading_options']['TICKERS_LIST']
+    
     USE_TRAILING_STOP_LOSS = parsed_config['trading_options']['USE_TRAILING_STOP_LOSS']
     TRAILING_STOP_LOSS = parsed_config['trading_options']['TRAILING_STOP_LOSS']
     TRAILING_TAKE_PROFIT = parsed_config['trading_options']['TRAILING_TAKE_PROFIT']
+     
+    # Code modified from DJCommie fork
+    # Load Session OVERRIDE values - used to STOP the bot when current session meets a certain STP or SSL value
+    SESSION_TPSL_OVERRIDE = parsed_config['trading_options']['SESSION_TPSL_OVERRIDE']
+    SESSION_TAKE_PROFIT = parsed_config['trading_options']['SESSION_TAKE_PROFIT']
+    SESSION_STOP_LOSS = parsed_config['trading_options']['SESSION_STOP_LOSS']
+
     TRADING_FEE = parsed_config['trading_options']['TRADING_FEE']
     SIGNALLING_MODULES = parsed_config['trading_options']['SIGNALLING_MODULES']
+
     if DEBUG_SETTING or args.debug:
         DEBUG = True
 
@@ -740,9 +781,20 @@ if __name__ == '__main__':
 
     # seed initial prices
     get_price()
-    while True:
+    while is_bot_running:
         orders, last_price, volume = buy()
         update_portfolio(orders, last_price, volume)
         coins_sold = sell_coins()
         remove_from_portfolio(coins_sold)
         update_bot_stats()
+
+    if not is_bot_running:
+        if SESSION_TPSL_OVERRIDE:
+            print(f'')
+            print(f'')
+            print(f'Session target met or exceeded targets. TODO Sell all coins now!')
+            #TODO sell all coins NOW!
+        else:
+            print(f'')
+            print(f'')
+            print(f'Bot terminated for some reason.')
