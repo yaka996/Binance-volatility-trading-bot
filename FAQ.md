@@ -16,7 +16,7 @@
 
 | Question   |   Answer |
 |----------|-------------|
-| What type of funds are required for this to work in PROD |  Ensure you account has the following: <ul><li>BNB ~$5 USD (used for fees / transactions)</li><li>Atleast X USDT matching your QUANTITYxMAX_COINS  (>$15 USD but check config for 'QUANTITY')</li></ul> |
+| What type of funds are required for this to work in PROD |  Ensure you account has the following: <ul><li>BNB ~$5 USD (used for fees / transactions)</li><li>Atleast X USDT matching your TRADE_SLOTS  (>$15 USD but check config for 'QUANTITY')</li></ul> |
 
 
 

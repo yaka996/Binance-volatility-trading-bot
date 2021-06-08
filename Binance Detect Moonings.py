@@ -154,7 +154,7 @@ def wait_for_price():
 
         threshold_check = (-1.0 if min_price[coin]['time'] > max_price[coin]['time'] else 1.0) * (float(max_price[coin]['price']) - float(min_price[coin]['price'])) / float(min_price[coin]['price']) * 100
 
-        # each coin with higher gains than our CHANGE_IN_PRICE is added to the volatile_coins dict if less than MAX_COINS is not reached.
+        # each coin with higher gains than our CHANGE_IN_PRICE is added to the volatile_coins dict if less than TRADE_SLOTS is not reached.
         if threshold_check > CHANGE_IN_PRICE:
             coins_up +=1
 
@@ -165,7 +165,7 @@ def wait_for_price():
             if datetime.now() >= volatility_cooloff[coin] + timedelta(minutes=TIME_DIFFERENCE):
                 volatility_cooloff[coin] = datetime.now()
 
-                if len(coins_bought) + len(volatile_coins) < MAX_COINS or MAX_COINS == 0:
+                if len(coins_bought) + len(volatile_coins) < TRADE_SLOTS or TRADE_SLOTS == 0:
                     volatile_coins[coin] = round(threshold_check, 3)
                     print(f'{coin} has gained {volatile_coins[coin]}% within the last {TIME_DIFFERENCE} minutes, calculating volume in {PAIR_WITH}')
 
@@ -187,7 +187,7 @@ def wait_for_price():
 
     for excoin in externals:
         if excoin not in volatile_coins and excoin not in coins_bought and \
-                (len(coins_bought) + exnumber + len(volatile_coins)) < MAX_COINS:
+                (len(coins_bought) + exnumber + len(volatile_coins)) < TRADE_SLOTS:
             volatile_coins[excoin] = 1
             exnumber +=1
             print(f'External signal received on {excoin}, calculating volume in {PAIR_WITH}')
@@ -489,7 +489,7 @@ if __name__ == '__main__':
     # Load trading vars
     PAIR_WITH = parsed_config['trading_options']['PAIR_WITH']
     QUANTITY = parsed_config['trading_options']['QUANTITY']
-    MAX_COINS = parsed_config['trading_options']['MAX_COINS']
+    TRADE_SLOTS = parsed_config['trading_options']['TRADE_SLOTS']
     FIATS = parsed_config['trading_options']['FIATS']
     TIME_DIFFERENCE = parsed_config['trading_options']['TIME_DIFFERENCE']
     RECHECK_INTERVAL = parsed_config['trading_options']['RECHECK_INTERVAL']
