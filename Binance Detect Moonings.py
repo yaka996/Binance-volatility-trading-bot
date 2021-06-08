@@ -66,27 +66,20 @@ class txcolors:
 
 
 # tracks profit/loss each session
-global session_profit, unrealised_percent, unrealised_percent_delay, is_bot_running, trades_won, trades_lost
-session_profit = 0
-unrealised_percent = 0
-unrealised_percent_delay = 0
+global session_profit_incfees_perc, session_profit_incfees_total, is_bot_running
+session_profit_incfees_perc = 0
+session_profit_incfees_total = 0
 is_bot_running = True
-trades_won = 0
-trades_lost = 0
 
-global profit_history, trade_wins, trade_losses, profit_history_all, profit_total
+global historic_profit_incfees_perc, historic_profit_incfees_total, trade_wins, trade_losses
 try:
-    profit_history
+    historic_profit_incfees_perc
 except NameError:
-    profit_history = 0      # or some other default value.
+    historic_profit_incfees_perc = 0      # or some other default value.
 try:
-    profit_history_all
+    historic_profit_incfees_total
 except NameError:
-    profit_history_all = 0      # or some other default value.
-try:
-    profit_total
-except NameError:
-    profit_total = 0      # or some other default value.
+    historic_profit_incfees_total = 0      # or some other default value.
 try:
     trade_wins
 except NameError:
@@ -184,12 +177,12 @@ def wait_for_price():
     if historical_prices[hsp_head]['BNB' + PAIR_WITH]['time'] > datetime.now() - timedelta(minutes=float(TIME_DIFFERENCE / RECHECK_INTERVAL)):
 
         # sleep for exactly the amount of time required
-        time.sleep((timedelta(minutes=float(TIME_DIFFERENCE / RECHECK_INTERVAL)) - (datetime.now() - historical_prices[hsp_head]['BNB' + PAIR_WITH]['time'])).total_seconds())
-
-    balance_report()
+        time.sleep((timedelta(minutes=float(TIME_DIFFERENCE / RECHECK_INTERVAL)) - (datetime.now() - historical_prices[hsp_head]['BNB' + PAIR_WITH]['time'])).total_seconds())    
 
     # retrieve latest prices
-    get_price()
+    last_price = get_price()
+
+    balance_report(last_price)
 
     # calculate the difference in prices
     for coin in historical_prices[hsp_head]:
@@ -213,7 +206,7 @@ def wait_for_price():
 
                 if len(coins_bought) + len(volatile_coins) < TRADE_SLOTS or TRADE_SLOTS == 0:
                     volatile_coins[coin] = round(threshold_check, 3)
-                    print(f'{coin} has gained {volatile_coins[coin]}% within the last {TIME_DIFFERENCE} minutes, purchasing ${QUANTITY} {PAIR_WITH} of {coin}!')
+                    print(f'{coin} has gained {volatile_coins[coin]}% within the last {TIME_DIFFERENCE} minutes, purchasing ${TRADE_TOTAL} {PAIR_WITH} of {coin}!')
 
                 else:
                     print(f'{txcolors.WARNING}{coin} has gained {round(threshold_check, 3)}% within the last {TIME_DIFFERENCE} minutes, but you are using all available trade slots!{txcolors.DEFAULT}')
@@ -236,7 +229,7 @@ def wait_for_price():
                 (len(coins_bought) + exnumber + len(volatile_coins)) < TRADE_SLOTS:
             volatile_coins[excoin] = 1
             exnumber +=1
-            print(f"External signal received on {excoin}, purchasing ${QUANTITY} {PAIR_WITH} value of {excoin}!")
+            print(f"External signal received on {excoin}, purchasing ${TRADE_TOTAL} {PAIR_WITH} value of {excoin}!")
 
     return volatile_coins, len(volatile_coins), historical_prices[hsp_head]
 
@@ -259,51 +252,57 @@ def external_signals():
     return external_list
 
 
-def balance_report():
-    global profit_history, unrealised_percent, trade_wins, trade_losses
+def balance_report(last_price):
+
+    global trade_wins, trade_losses, session_profit_incfees_perc, session_profit_incfees_total
+    unrealised_session_profit_incfees_perc = 0
+    unrealised_session_profit_incfees_total = 0
+
+    BUDGET = TRADE_SLOTS * TRADE_TOTAL
+
+    for coin in list(coins_bought):
+        LastPrice = float(last_price[coin]['price'])
+        sellFee = (LastPrice * (TRADING_FEE/100))
+        
+        BuyPrice = float(coins_bought[coin]['bought_at'])
+        buyFee = (BuyPrice * (TRADING_FEE/100))
+
+        PriceChangeIncFees_Perc = float(((LastPrice+sellFee) - (BuyPrice+buyFee)) / (BuyPrice+buyFee) * 100)
+        PriceChangeIncFees_Total = float(((LastPrice+sellFee) - (BuyPrice+buyFee)) * coins_bought[coin]['volume'])
+
+        unrealised_session_profit_incfees_perc = float(unrealised_session_profit_incfees_perc + PriceChangeIncFees_Perc)
+        unrealised_session_profit_incfees_total = float(unrealised_session_profit_incfees_total + PriceChangeIncFees_Total)
+
     DECIMALS = int(decimals())
-    INVESTMENT_TOTAL = (QUANTITY * TRADE_SLOTS)
-    CURRENT_EXPOSURE = (QUANTITY * len(coins_bought))
-    INVESTMENT_TOTAL  = round(INVESTMENT_TOTAL, DECIMALS)
-    CURRENT_EXPOSURE = round(CURRENT_EXPOSURE, DECIMALS)
-    TOTAL_GAINS = round((QUANTITY * session_profit) / 100, DECIMALS)
-    # NEW_BALANCE = (INVESTMENT_TOTAL + TOTAL_GAINS)
-    INVESTMENT_GAIN = round((TOTAL_GAINS / INVESTMENT_TOTAL) * 100, 2)
-    SESSION_PROFIT =  round(session_profit, 2)
-    PROFIT_HISTORY = round(profit_history, 2)
-    PROFIT_HISTORY_ALL = round(profit_history_all, 2)
-    PROFIT_TOTAL = round(profit_total, DECIMALS)
-    # truncating some of the above values to the correct decimal places before printing
-
+    CURRENT_EXPOSURE = round((TRADE_TOTAL * len(coins_bought)), DECIMALS)
+    INVESTMENT_TOTAL = round((TRADE_TOTAL * TRADE_SLOTS), DECIMALS)
     
-
-    if len(coins_bought) > 0:
-        UNREALISED_PERCENT = round(unrealised_percent/len(coins_bought), 2)
-    else:
-        UNREALISED_PERCENT = 0
+    # truncating some of the above values to the correct decimal places before printing
     if (trade_wins > 0) and (trade_losses > 0):
         WIN_LOSS_PERCENT = round((trade_wins / (trade_wins+trade_losses)) * 100, 2)
-        
     else:
-        WIN_LOSS_PERCENT = 100
+        WIN_LOSS_PERCENT = 0
 
     print(f'')
     print(f'--------')
-    print(f'ALL TIME PROFIT   : ${float(PROFIT_TOTAL):g} {PAIR_WITH} ??({float(PROFIT_HISTORY_ALL):g}%)??')
-    print(f'SESSION PROFIT    : ${float(TOTAL_GAINS):g} {PAIR_WITH} ??({float(INVESTMENT_GAIN):g}%)??')
-    print(f'{len(coins_bought)}/{TRADE_SLOTS} ({float(CURRENT_EXPOSURE):g}/{float(INVESTMENT_TOTAL):g} {PAIR_WITH}) @ {float(UNREALISED_PERCENT):g}% avg')
+    print(f'CURRENT HOLDS  : {len(coins_bought)}/{TRADE_SLOTS} ({float(CURRENT_EXPOSURE):g}/{float(INVESTMENT_TOTAL):g} {PAIR_WITH})')
     print(f'')
-    print(f'ALL TIME WIN RATIO: {float(WIN_LOSS_PERCENT):g}% (W/L: {trade_wins}/{trade_losses})')
-    print(f'Closed trades     : {float(SESSION_PROFIT):g}% (all time: {float(PROFIT_HISTORY):g}%)')
+    print(f'SESSION PROFIT (Inc Fees)')
+    print(f'Realised       : {session_profit_incfees_perc:.2f}% Est:${session_profit_incfees_total:.2f} {PAIR_WITH}')
+    print(f'Unrealised     : {unrealised_session_profit_incfees_perc:.2f}% Est:${unrealised_session_profit_incfees_total:.2f} {PAIR_WITH}')
+    print(f'       Total   : {session_profit_incfees_perc + unrealised_session_profit_incfees_perc:.2f}% Est:${session_profit_incfees_total+unrealised_session_profit_incfees_total:.2f} {PAIR_WITH}')
+    print(f'')
+    print(f'HISTORIC PROFIT: {historic_profit_incfees_perc:.2f}% Est:${historic_profit_incfees_total:.2f} {PAIR_WITH}')
+    print(f'HISTORIC WIN % : {float(WIN_LOSS_PERCENT):g}% (W/L: {trade_wins}/{trade_losses})')
     print(f'--------')
     print(f'')
-    unrealised_percent_calc()
+    
     return
 
 
 def pause_bot():
     '''Pause the script when external indicators detect a bearish trend in the market'''
-    global bot_paused, session_profit, hsp_head
+    global bot_paused, session_profit_incfees_perc, hsp_head, session_profit_incfees_total
 
     # start counting for how long the bot has been paused
     start_time = time.perf_counter()
@@ -320,7 +319,7 @@ def pause_bot():
         get_price(True)
 
         # pausing here
-        if hsp_head == 1: print(f'Paused...Session profit: {session_profit:.2f}% Est: ${(QUANTITY * session_profit)/100:.{decimals()}f} {PAIR_WITH}')
+        if hsp_head == 1: print(f'Paused...Session profit: {session_profit_incfees_perc:.2f}% Est: ${session_profit_incfees_total:.{decimals()}f} {PAIR_WITH}')
         time.sleep((TIME_DIFFERENCE * 60) / RECHECK_INTERVAL)
 
     else:
@@ -337,7 +336,7 @@ def pause_bot():
 
 
 def convert_volume():
-    '''Converts the volume given in QUANTITY from USDT to the each coin's volume'''
+    '''Converts the volume given in TRADE_TOTAL from USDT to the each coin's volume'''
 
     volatile_coins, number_of_coins, last_price = wait_for_price()
     lot_size = {}
@@ -359,8 +358,8 @@ def convert_volume():
         except:
             pass
 
-        # calculate the volume in coin from QUANTITY in PAIR_WITH (default)
-        volume[coin] = float(QUANTITY / float(last_price[coin]['price']))
+        # calculate the volume in coin from TRADE_TOTAL in PAIR_WITH (default)
+        volume[coin] = float(TRADE_TOTAL / float(last_price[coin]['price']))
 
         # define the volume with the correct step size
         if coin not in lot_size:
@@ -384,7 +383,7 @@ def buy():
     for coin in volume:
 
         if coin not in coins_bought:
-            print(f'{txcolors.BUY}Preparing to buy {volume[coin]} {coin}{txcolors.DEFAULT}')
+            print(f"{txcolors.BUY}Preparing to buy {volume[coin]} of {coin} @ ${last_price[coin]['price']}{txcolors.DEFAULT}")
 
             if TEST_MODE:
                 orders[coin] = [{
@@ -438,28 +437,35 @@ def buy():
 
 def sell_coins():
     '''sell coins that have reached the STOP LOSS or TAKE PROFIT threshold'''
-    global hsp_head, session_profit, profit_history, coin_order_id, trade_wins, trade_losses, profit_history_all, profit_total, trades_won, trades_lost
+    global hsp_head, session_profit_incfees_perc, session_profit_incfees_total, coin_order_id, trade_wins, trade_losses, historic_profit_incfees_perc, historic_profit_incfees_total
     last_price = get_price(False) # don't populate rolling window
     #last_price = get_price(add_to_historical=True) # don't populate rolling window
     coins_sold = {}
 
     check_total_session_profit(coins_bought, last_price)
-    for coin in list(coins_bought):
-        # define stop loss and take profit
-        TP = float(coins_bought[coin]['bought_at']) + (float(coins_bought[coin]['bought_at']) * coins_bought[coin]['take_profit']) / 100
-        SL = float(coins_bought[coin]['bought_at']) + (float(coins_bought[coin]['bought_at']) * coins_bought[coin]['stop_loss']) / 100
 
+    for coin in list(coins_bought):
         LastPrice = float(last_price[coin]['price'])
-        sellFee = (coins_bought[coin]['volume'] * LastPrice) * (TRADING_FEE/100)
+        sellFee = (LastPrice * (TRADING_FEE/100))
+        sellFeeTotal = (coins_bought[coin]['volume'] * LastPrice) * (TRADING_FEE/100)
+        
         BuyPrice = float(coins_bought[coin]['bought_at'])
-        buyFee = (coins_bought[coin]['volume'] * BuyPrice) * (TRADING_FEE/100)
-        PriceChange = float((LastPrice - BuyPrice) / BuyPrice * 100)
+        buyFee = (BuyPrice * (TRADING_FEE/100))
+        buyFeeTotal = (coins_bought[coin]['volume'] * BuyPrice) * (TRADING_FEE/100)
+        
+        PriceChange_Perc = float((LastPrice - BuyPrice) / BuyPrice * 100)
+        PriceChangeIncFees_Perc = float(((LastPrice+sellFee) - (BuyPrice+buyFee)) / (BuyPrice+buyFee) * 100)
+        PriceChangeIncFees_Unit = float((LastPrice+sellFee) - (BuyPrice+buyFee))
+
+        # define stop loss and take profit
+        TP = float(coins_bought[coin]['bought_at']) + ((float(coins_bought[coin]['bought_at']) * (coins_bought[coin]['take_profit']) / 100))
+        SL = float(coins_bought[coin]['bought_at']) + ((float(coins_bought[coin]['bought_at']) * (coins_bought[coin]['stop_loss']) / 100))
 
         # check that the price is above the take profit and readjust SL and TP accordingly if trialing stop loss used
         if LastPrice > TP and USE_TRAILING_STOP_LOSS:
 
             # increasing TP by TRAILING_TAKE_PROFIT (essentially next time to readjust SL)
-            coins_bought[coin]['take_profit'] = PriceChange + TRAILING_TAKE_PROFIT
+            coins_bought[coin]['take_profit'] = PriceChange_Perc + TRAILING_TAKE_PROFIT
             coins_bought[coin]['stop_loss'] = coins_bought[coin]['take_profit'] - TRAILING_STOP_LOSS
 			# if DEBUG: print(f"{coin} TP reached, adjusting TP {coins_bought[coin]['take_profit']:.2f}  and SL {coins_bought[coin]['stop_loss']:.2f} accordingly to lock-in profit")
             if DEBUG: print(f"{coin} TP reached, adjusting TP {coins_bought[coin]['take_profit']:.{decimals()}f}  and SL {coins_bought[coin]['stop_loss']:.{decimals()}f} accordingly to lock-in profit")
@@ -468,8 +474,8 @@ def sell_coins():
         # check that the price is below the stop loss or above take profit (if trailing stop loss not used) and sell if this is the case
         if LastPrice < SL or LastPrice > TP and not USE_TRAILING_STOP_LOSS:
 	        
-            # print(f"{txcolors.SELL_PROFIT if PriceChange >= 0. else txcolors.SELL_LOSS}TP or SL reached, selling {coins_bought[coin]['volume']} {coin} - {BuyPrice} - {LastPrice} : {PriceChange-(TRADING_FEE*2):.2f}% Est:${(QUANTITY*(PriceChange-(TRADING_FEE*2)))/100:.2f}{txcolors.DEFAULT}")
-            print(f"{txcolors.SELL_PROFIT if PriceChange >= 0. else txcolors.SELL_LOSS} TP {TP} or SL {SL} reached, selling {coins_bought[coin]['volume']} of {coin} @ {float(LastPrice):g} (Bought @ {float(BuyPrice):g}). {PriceChange-(buyFee+sellFee):.2f}% Est: {(QUANTITY*(PriceChange-(buyFee+sellFee)))/100:.{decimals()}f} {PAIR_WITH}{txcolors.DEFAULT}")
+            # print(f"{txcolors.SELL_PROFIT if PriceChange_Perc >= 0. else txcolors.SELL_LOSS}TP or SL reached, selling {coins_bought[coin]['volume']} {coin} - {BuyPrice} - {LastPrice} : {PriceChange_Perc-(TRADING_FEE*2):.2f}% Est:${(TRADE_TOTAL*(PriceChange_Perc-(TRADING_FEE*2)))/100:.2f}{txcolors.DEFAULT}")
+            print(f"{txcolors.SELL_PROFIT if PriceChangeIncFees_Perc >= 0. else txcolors.SELL_LOSS}{coin}: TP {TP} or SL {SL} reached. Selling {coins_bought[coin]['volume']} @ ${float(LastPrice):g} (Bought @ ${float(BuyPrice):g}). {PriceChangeIncFees_Perc:.2f}% Est: {(TRADE_TOTAL*PriceChangeIncFees_Perc)/100:.{decimals()}f} {PAIR_WITH}{txcolors.DEFAULT} (Inc Fees)")
             
             # try to create a real order
             try:
@@ -487,29 +493,26 @@ def sell_coins():
 
             # run the else block if coin has been sold and create a dict for each coin sold
             else:
-                # coins_sold[coin]['orderid'] = coins_bought[coin]['orderid']
                 coins_sold[coin] = coins_bought[coin]
-                # print(f"{coins_sold[coin]}")
-                # coins_sold[coin] = coins_bought[coin]['orderid']
 
                 # prevent system from buying this coin for the next TIME_DIFFERENCE minutes
                 volatility_cooloff[coin] = datetime.now()
 
                 # Log trade
-				# if LOG_TRADES:
-                profit = ((LastPrice - BuyPrice) * coins_sold[coin]['volume']) * (1-(buyFee + sellFee))
-                write_log(f"Sell: {coins_sold[coin]['volume']} {coin} - {BuyPrice} - {LastPrice} Profit: {profit:.{decimals()}f} {PAIR_WITH} ({PriceChange-(buyFee+sellFee):.2f}%)")
-                session_profit = session_profit + (PriceChange-(buyFee+sellFee))
-                profit_history = profit_history + (PriceChange-(buyFee+sellFee))
-                profit_history_all = profit_history_all + (QUANTITY * (PriceChange-(buyFee+sellFee)) / 100)
-                profit_total = round(profit_total + profit, decimals())
+                #BB profit = ((LastPrice - BuyPrice) * coins_sold[coin]['volume']) * (1-(buyFee + sellFeeTotal))
+                profit_incfees_total = coins_sold[coin]['volume'] * PriceChangeIncFees_Unit
+                write_log(f"Sell: {coins_sold[coin]['volume']} {coin} - {BuyPrice} - {LastPrice} Profit: {profit_incfees_total:.{decimals()}f} {PAIR_WITH} ({PriceChange_Perc:.2f}%)")
                 
-                if BuyPrice >= LastPrice:
+                #this is good
+                session_profit_incfees_perc = session_profit_incfees_perc + PriceChangeIncFees_Perc
+                session_profit_incfees_total = session_profit_incfees_total + profit_incfees_total
+                historic_profit_incfees_perc = historic_profit_incfees_perc + PriceChangeIncFees_Perc
+                historic_profit_incfees_total = historic_profit_incfees_total + profit_incfees_total
+                
+                if (LastPrice+sellFee) >= (BuyPrice+buyFee):
                     trade_wins += 1
-                    trades_won += 1
                 else:
                     trade_losses += 1
-                    trades_lost += 1
 
                 update_bot_stats()
 
@@ -518,8 +521,7 @@ def sell_coins():
         # no action; print once every TIME_DIFFERENCE
         if hsp_head == 1:
             if len(coins_bought) > 0:
-				# print(f'TP or SL not yet reached, not selling {coin} for now {BuyPrice} - {LastPrice} : {txcolors.SELL_PROFIT if PriceChange >= 0. else txcolors.SELL_LOSS}{PriceChange-(TRADING_FEE*2):.2f}% Est:${(QUANTITY*(PriceChange-(TRADING_FEE*2)))/100:.2f}{txcolors.DEFAULT}')
-                print(f"Holding {coin} - Price: {BuyPrice}, Now: {LastPrice}, P/L: {txcolors.SELL_PROFIT if PriceChange >= 0. else txcolors.SELL_LOSS}{PriceChange-(buyFee+sellFee):.2f}% ({(QUANTITY*(PriceChange-(buyFee+sellFee)))/100:.{decimals()}f} {PAIR_WITH}{txcolors.DEFAULT})")
+                print(f"Holding Qty: {coins_bought[coin]['volume']} of {coin} - Buy: ${BuyPrice} Current: ${LastPrice}. P/L (inc Fees): {txcolors.SELL_PROFIT if PriceChangeIncFees_Perc >= 0. else txcolors.SELL_LOSS}{PriceChangeIncFees_Perc:.2f}% ({(TRADE_TOTAL*PriceChangeIncFees_Perc)/100:.{decimals()}f} {PAIR_WITH}{txcolors.DEFAULT})")
 
     if hsp_head == 1 and len(coins_bought) == 0: print(f"No trade slots are currently in use")
 
@@ -527,25 +529,30 @@ def sell_coins():
 
 
 def check_total_session_profit(coins_bought, last_price):
+    global session_profit_incfees_perc, session_profit_incfees_total, is_bot_running
     
-    #TODO: Add to config
-    BUDGET = TRADE_SLOTS * QUANTITY
-
-    global session_profit, is_bot_running
+    unrealised_session_profit_incfees_perc = 0
+    BUDGET = TRADE_SLOTS * TRADE_TOTAL
     
-    TotalSessionChange = session_profit
+    # unrealised_session_profit_incfees_perc = session_profit_incfees_perc
     for coin in list(coins_bought):
         LastPrice = float(last_price[coin]['price'])
+        sellFee = (LastPrice * (TRADING_FEE/100))
+        
         BuyPrice = float(coins_bought[coin]['bought_at'])
-        PriceChange = float((LastPrice - BuyPrice) / BuyPrice * 100)
+        buyFee = (BuyPrice * (TRADING_FEE/100))
+        
+        # PriceChange_Perc = float((LastPrice - BuyPrice) / BuyPrice * 100)
+        PriceChangeIncFees_Perc = float(((LastPrice+sellFee) - (BuyPrice+buyFee)) / (BuyPrice+buyFee) * 100)
 
-        TotalSessionChange = float(TotalSessionChange + (PriceChange/TRADE_SLOTS))
+        unrealised_session_profit_incfees_perc = float(unrealised_session_profit_incfees_perc + PriceChangeIncFees_Perc)
 
-    print(f'ACTUAL session profit: {TotalSessionChange:.2f}% Est:${TotalSessionChange/100 * BUDGET:.2f}')
+    allsession_profits_perc = unrealised_session_profit_incfees_perc + session_profit_incfees_perc
+
     if SESSION_TPSL_OVERRIDE:
-        if (TotalSessionChange >= float(SESSION_TAKE_PROFIT) or TotalSessionChange <= float(SESSION_STOP_LOSS)):
+        if allsession_profits_perc >= float(SESSION_TAKE_PROFIT) or allsession_profits_perc <= float(SESSION_STOP_LOSS):
+            #BB Write out session state here!
             is_bot_running = False
-
 
 def update_portfolio(orders, last_price, volume):
     '''add every coin bought to our portfolio for tracking/selling later'''
@@ -571,12 +578,11 @@ def update_portfolio(orders, last_price, volume):
 
 
 def update_bot_stats():
-    global profit_history, trade_wins, trade_losses, profit_history_all, profit_total
-    #BB if not TEST_MODE:
+    global trade_wins, trade_losses, historic_profit_incfees_perc, historic_profit_incfees_total
+
     bot_stats = {
-        'profitPercent': profit_history,
-        'profitPercentAll': profit_history_all,
-        'profitTotal': profit_total,
+        'historicProfitIncFees_Percent': historic_profit_incfees_perc,
+        'historicProfitIncFees_Total': historic_profit_incfees_total,
         'tradeWins': trade_wins,
         'tradeLosses': trade_losses,
     }
@@ -599,25 +605,6 @@ def write_log(logline):
     timestamp = datetime.now().strftime("%d/%m %H:%M:%S")
     with open(LOG_FILE,'a+') as f:
         f.write(timestamp + ' ' + logline + '\n')
-
-
-def unrealised_percent_calc():
-    global unrealised_percent_delay, unrealised_percent
-    if (unrealised_percent_delay > 3):
-        unrealised_percent = 0
-        for coin in list(coins_bought):
-            LastPrice = float(last_price[coin]['price'])
-            # sell fee below would ofc only apply if transaction was closed at the current LastPrice
-            sellFee = (LastPrice * (TRADING_FEE/100))
-            BuyPrice = float(coins_bought[coin]['bought_at'])
-            buyFee = (BuyPrice * (TRADING_FEE/100))
-            PriceChange = float((LastPrice - BuyPrice) / BuyPrice * 100)
-            if len(coins_bought) > 0:
-                unrealised_percent = unrealised_percent + (PriceChange-(buyFee+sellFee))
-                unrealised_percent_delay = 0
-    else:
-        unrealised_percent_delay =  unrealised_percent_delay + 1
-    return unrealised_percent
 
 if __name__ == '__main__':
 
@@ -649,7 +636,7 @@ if __name__ == '__main__':
 
     # Load trading vars
     PAIR_WITH = parsed_config['trading_options']['PAIR_WITH']
-    QUANTITY = parsed_config['trading_options']['QUANTITY']
+    TRADE_TOTAL = parsed_config['trading_options']['TRADE_TOTAL']
     TRADE_SLOTS = parsed_config['trading_options']['TRADE_SLOTS']
     FIATS = parsed_config['trading_options']['FIATS']
     
@@ -724,9 +711,8 @@ if __name__ == '__main__':
         with open(bot_stats_file_path) as file:
             bot_stats = json.load(file)
             # load bot stats:
-            profit_history = bot_stats['profitPercent']
-            profit_history_all = bot_stats['profitPercentAll']
-            profit_total = bot_stats['profitTotal']
+            historic_profit_incfees_perc = bot_stats['historicProfitIncFees_Percent']
+            historic_profit_incfees_total = bot_stats['historicProfitIncFees_Total']
             trade_wins = bot_stats['tradeWins']
             trade_losses = bot_stats['tradeLosses']
 

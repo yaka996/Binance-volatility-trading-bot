@@ -17,10 +17,10 @@ trading_options:
   # select your base currency to use for trading (trade for example USDT pairs)
   PAIR_WITH: USDT
 
-  # Total amount per trade (your base currency balance must be at least TRADE_SLOTS * QUANTITY)
+  # Total amount per trade (your base currency balance must be at least TRADE_SLOTS * TRADE_TOTAL)
   # Binance uses a minimum of 10 USDT per trade, add a bit extra to enable selling if the price drops.
   # Recommended: no less than 12 USDT. Suggested: 15 or more.
-  QUANTITY: 15
+  TRADE_TOTAL: 15
 
   # List of trading pairs to exclude
   # by default we're excluding the most popular fiat pairs
@@ -33,7 +33,7 @@ trading_options:
     - DOWN
     - UP
 
-  # Maximum number of trade 'slots' at any time (your USDT balance must be at least TRADE_SLOTS * QUANTITY)
+  # Maximum number of trade 'slots' at any time (your USDT balance must be at least TRADE_SLOTS * TRADE_TOTAL)
   TRADE_SLOTS: 7
 
   # the amount of time in MINUTES to calculate the difference from the current price (minimum: 1).
@@ -76,7 +76,7 @@ trading_options:
   # Trading fee in % per trade.
   # If using 0.75% (using BNB for fees) you must have BNB in your account to cover trading fees.
   # If using BNB for fees, it MUST be enabled in your Binance 'Dashboard' page (checkbox).
-  TRADING_FEE: .075
+  TRADING_FEE: .75
   
   SIGNALLING_MODULES:
    # - pausebotmod
