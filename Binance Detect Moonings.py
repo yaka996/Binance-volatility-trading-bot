@@ -33,6 +33,7 @@ init()
 # needed for the binance API / websockets / Exception handling
 from binance.client import Client
 from binance.exceptions import BinanceAPIException
+from requests.exceptions import ReadTimeout
 
 # used for dates
 from datetime import date, datetime, timedelta
@@ -126,7 +127,7 @@ def is_fiat():
 def decimals():
     # set number of decimals for reporting fractions
     if is_fiat():
-        return 2
+        return 4
     else:
         return 8
 
@@ -278,22 +279,26 @@ def balance_report(last_price):
     INVESTMENT_TOTAL = round((TRADE_TOTAL * TRADE_SLOTS), DECIMALS)
     
     # truncating some of the above values to the correct decimal places before printing
+    WIN_LOSS_PERCENT = 0
     if (trade_wins > 0) and (trade_losses > 0):
         WIN_LOSS_PERCENT = round((trade_wins / (trade_wins+trade_losses)) * 100, 2)
-    else:
-        WIN_LOSS_PERCENT = 0
-
+    if (trade_wins > 0) and (trade_losses == 0):
+        WIN_LOSS_PERCENT = 100
+    
     print(f'')
     print(f'--------')
-    print(f'CURRENT HOLDS  : {len(coins_bought)}/{TRADE_SLOTS} ({float(CURRENT_EXPOSURE):g}/{float(INVESTMENT_TOTAL):g} {PAIR_WITH})')
+    print(f'STARTED         : {DATETIMESTARTED} | Running for: {datetime.now() - DATETIMESTARTED}')
+    print(f'CURRENT HOLDS   : {len(coins_bought)}/{TRADE_SLOTS} ({float(CURRENT_EXPOSURE):g}/{float(INVESTMENT_TOTAL):g} {PAIR_WITH})')
     print(f'')
     print(f'SESSION PROFIT (Inc Fees)')
-    print(f'Realised       : {session_profit_incfees_perc:.2f}% Est:${session_profit_incfees_total:.2f} {PAIR_WITH}')
-    print(f'Unrealised     : {unrealised_session_profit_incfees_perc:.2f}% Est:${unrealised_session_profit_incfees_total:.2f} {PAIR_WITH}')
-    print(f'       Total   : {session_profit_incfees_perc + unrealised_session_profit_incfees_perc:.2f}% Est:${session_profit_incfees_total+unrealised_session_profit_incfees_total:.2f} {PAIR_WITH}')
+    print(f'Realised        : {txcolors.SELL_PROFIT if session_profit_incfees_perc > 0. else txcolors.SELL_LOSS}{session_profit_incfees_perc:.4f}% Est:${session_profit_incfees_total:.4f} {PAIR_WITH}{txcolors.DEFAULT}')
+    print(f'Unrealised      : {txcolors.SELL_PROFIT if unrealised_session_profit_incfees_perc > 0. else txcolors.SELL_LOSS}{unrealised_session_profit_incfees_perc:.4f}% Est:${unrealised_session_profit_incfees_total:.4f} {PAIR_WITH}{txcolors.DEFAULT}')
+    print(f'        Total   : {txcolors.SELL_PROFIT if (session_profit_incfees_perc + unrealised_session_profit_incfees_perc) > 0. else txcolors.SELL_LOSS}{session_profit_incfees_perc + unrealised_session_profit_incfees_perc:.4f}% Est:${session_profit_incfees_total+unrealised_session_profit_incfees_total:.4f} {PAIR_WITH}{txcolors.DEFAULT}')
     print(f'')
-    print(f'HISTORIC PROFIT: {historic_profit_incfees_perc:.2f}% Est:${historic_profit_incfees_total:.2f} {PAIR_WITH}')
-    print(f'HISTORIC WIN % : {float(WIN_LOSS_PERCENT):g}% (W/L: {trade_wins}/{trade_losses})')
+    print(f'ALL TIME DATA   :')
+    print(f'Profit          : {txcolors.SELL_PROFIT if historic_profit_incfees_perc > 0. else txcolors.SELL_LOSS}{historic_profit_incfees_perc:.4f}% Est:${historic_profit_incfees_total:.4f} {PAIR_WITH}{txcolors.DEFAULT}')
+    print(f'Completed Trades: {trade_wins+trade_losses} (Wins:{trade_wins} Losses:{trade_losses})')
+    print(f'Win Ratio       : {float(WIN_LOSS_PERCENT):g}%')
     print(f'--------')
     print(f'')
     
@@ -508,6 +513,8 @@ def sell_coins():
                 session_profit_incfees_total = session_profit_incfees_total + profit_incfees_total
                 historic_profit_incfees_perc = historic_profit_incfees_perc + PriceChangeIncFees_Perc
                 historic_profit_incfees_total = historic_profit_incfees_total + profit_incfees_total
+
+                #TRADE_TOTAL*PriceChangeIncFees_Perc)/100
                 
                 if (LastPrice+sellFee) >= (BuyPrice+buyFee):
                     trade_wins += 1
@@ -521,7 +528,7 @@ def sell_coins():
         # no action; print once every TIME_DIFFERENCE
         if hsp_head == 1:
             if len(coins_bought) > 0:
-                print(f"Holding Qty: {coins_bought[coin]['volume']} of {coin} - Buy: ${BuyPrice} Current: ${LastPrice}. P/L (inc Fees): {txcolors.SELL_PROFIT if PriceChangeIncFees_Perc >= 0. else txcolors.SELL_LOSS}{PriceChangeIncFees_Perc:.2f}% ({(TRADE_TOTAL*PriceChangeIncFees_Perc)/100:.{decimals()}f} {PAIR_WITH}{txcolors.DEFAULT})")
+                print(f"Holding Qty: {coins_bought[coin]['volume']} of {coin} - Buy: ${BuyPrice} Current: ${LastPrice}. P/L (inc Fees): {txcolors.SELL_PROFIT if PriceChangeIncFees_Perc >= 0. else txcolors.SELL_LOSS}{PriceChangeIncFees_Perc:.4f}% ({(TRADE_TOTAL*PriceChangeIncFees_Perc)/100:.{decimals()}f} {PAIR_WITH}){txcolors.DEFAULT}")
 
     if hsp_head == 1 and len(coins_bought) == 0: print(f"No trade slots are currently in use")
 
@@ -611,6 +618,8 @@ if __name__ == '__main__':
     # Load arguments then parse settings
     args = parse_args()
     mymodule = {}
+
+    DATETIMESTARTED = datetime.now()
 
     # set to false at Start
     global bot_paused
@@ -767,12 +776,18 @@ if __name__ == '__main__':
 
     # seed initial prices
     get_price()
+    READ_TIMEOUT_COUNT=0
+
     while is_bot_running:
-        orders, last_price, volume = buy()
-        update_portfolio(orders, last_price, volume)
-        coins_sold = sell_coins()
-        remove_from_portfolio(coins_sold)
-        update_bot_stats()
+        try:
+            orders, last_price, volume = buy()
+            update_portfolio(orders, last_price, volume)
+            coins_sold = sell_coins()
+            remove_from_portfolio(coins_sold)
+            update_bot_stats()
+        except ReadTimeout as rt:
+            READ_TIMEOUT_COUNT += 1
+            print(f'We got a timeout error from Binance. Re-loop. Connection Timeouts so far: {READ_TIMEOUT_COUNT}')
 
     if not is_bot_running:
         if SESSION_TPSL_OVERRIDE:
