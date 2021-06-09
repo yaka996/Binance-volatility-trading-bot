@@ -222,7 +222,7 @@ def wait_for_price():
     #print(f'Up: {coins_up} Down: {coins_down} Unchanged: {coins_unchanged}')
 
     # Here goes new code for external signalling
-    externals = external_signals()
+    externals = buy_external_signals()
     exnumber = 0
 
     for excoin in externals:
@@ -235,12 +235,12 @@ def wait_for_price():
     return volatile_coins, len(volatile_coins), historical_prices[hsp_head]
 
 
-def external_signals():
+def buy_external_signals():
     external_list = {}
     signals = {}
 
     # check directory and load pairs from files into external_list
-    signals = glob.glob("signals/*.exs")
+    signals = glob.glob("signals/*.buy")
     for filename in signals:
         for line in open(filename):
             symbol = line.strip()
@@ -249,6 +249,24 @@ def external_signals():
             os.remove(filename)
         except:
             if DEBUG: print(f'{txcolors.WARNING}Could not remove external signalling file{txcolors.DEFAULT}')
+
+    return external_list
+
+def sell_external_signals():
+    external_list = {}
+    signals = {}
+
+    # check directory and load pairs from files into external_list
+    signals = glob.glob("signals/*.sell")
+    for filename in signals:
+        for line in open(filename):
+            symbol = line.strip()
+            external_list[symbol] = symbol
+            if DEBUG: print(f'{symbol} added to sell_external_signals() list')
+        try:
+            os.remove(filename)
+        except:
+            if DEBUG: print(f'{txcolors.WARNING}Could not remove external SELL signalling file{txcolors.DEFAULT}')
 
     return external_list
 
@@ -312,7 +330,7 @@ def pause_bot():
     # start counting for how long the bot has been paused
     start_time = time.perf_counter()
 
-    while os.path.isfile("signals/paused.exc"):
+    while os.path.isfile("signals/*.pause"):
 
         if bot_paused == False:
             print(f'{txcolors.WARNING}Buying paused due to negative market conditions, stop loss and take profit will continue to work...{txcolors.DEFAULT}')
@@ -397,9 +415,11 @@ def buy():
                     'time': datetime.now().timestamp()
                 }]
 
-           		 # Log trade
+           		# Log trade
                 #if LOG_TRADES:
                 write_log(f"Buy : {volume[coin]} {coin} - {last_price[coin]['price']}")
+                
+                write_signallsell(coin.removesuffix(PAIR_WITH))
 
                 continue
 
@@ -434,6 +454,7 @@ def buy():
                 # Log trade
                     #if LOG_TRADES:
                     write_log(f"Buy : {volume[coin]} {coin} - {last_price[coin]['price']}")
+                    write_signallsell(coin)
 
         else:
             print(f'Signal detected, but there is already an active trade on {coin}')
@@ -443,11 +464,15 @@ def buy():
 def sell_coins():
     '''sell coins that have reached the STOP LOSS or TAKE PROFIT threshold'''
     global hsp_head, session_profit_incfees_perc, session_profit_incfees_total, coin_order_id, trade_wins, trade_losses, historic_profit_incfees_perc, historic_profit_incfees_total
+    
+    externals = sell_external_signals()
+    
     last_price = get_price(False) # don't populate rolling window
     #last_price = get_price(add_to_historical=True) # don't populate rolling window
     coins_sold = {}
 
-    check_total_session_profit(coins_bought, last_price)
+    if SESSION_TPSL_OVERRIDE:
+        check_total_session_profit(coins_bought, last_price)
 
     for coin in list(coins_bought):
         LastPrice = float(last_price[coin]['price'])
@@ -473,14 +498,28 @@ def sell_coins():
             coins_bought[coin]['take_profit'] = PriceChange_Perc + TRAILING_TAKE_PROFIT
             coins_bought[coin]['stop_loss'] = coins_bought[coin]['take_profit'] - TRAILING_STOP_LOSS
 			# if DEBUG: print(f"{coin} TP reached, adjusting TP {coins_bought[coin]['take_profit']:.2f}  and SL {coins_bought[coin]['stop_loss']:.2f} accordingly to lock-in profit")
-            if DEBUG: print(f"{coin} TP reached, adjusting TP {coins_bought[coin]['take_profit']:.{decimals()}f}  and SL {coins_bought[coin]['stop_loss']:.{decimals()}f} accordingly to lock-in profit")
+            if DEBUG: print(f"{coin} TP reached, adjusting TP {coins_bought[coin]['take_profit']:.{decimals()}f} and SL {coins_bought[coin]['stop_loss']:.{decimals()}f} accordingly to lock-in profit")
             continue
 
         # check that the price is below the stop loss or above take profit (if trailing stop loss not used) and sell if this is the case
-        if LastPrice < SL or LastPrice > TP and not USE_TRAILING_STOP_LOSS:
-	        
-            # print(f"{txcolors.SELL_PROFIT if PriceChange_Perc >= 0. else txcolors.SELL_LOSS}TP or SL reached, selling {coins_bought[coin]['volume']} {coin} - {BuyPrice} - {LastPrice} : {PriceChange_Perc-(TRADING_FEE*2):.2f}% Est:${(TRADE_TOTAL*(PriceChange_Perc-(TRADING_FEE*2)))/100:.2f}{txcolors.DEFAULT}")
-            print(f"{txcolors.SELL_PROFIT if PriceChangeIncFees_Perc >= 0. else txcolors.SELL_LOSS}{coin}: TP {TP} or SL {SL} reached. Selling {coins_bought[coin]['volume']} @ ${float(LastPrice):g} (Bought @ ${float(BuyPrice):g}). {PriceChangeIncFees_Perc:.2f}% Est: {(TRADE_TOTAL*PriceChangeIncFees_Perc)/100:.{decimals()}f} {PAIR_WITH}{txcolors.DEFAULT} (Inc Fees)")
+        sellCoin = False
+        sell_reason = ""
+        if SELL_ON_SIGNAL_ONLY:
+            if coin in externals:
+                sellCoin = True
+                sell_reason = 'External Sell Signal'
+
+        else:
+            if LastPrice < SL: 
+                sellCoin = True
+                sell_reason = 'TP {TP} reached'
+            if LastPrice > TP:
+                sellCoin = True
+                sell_reason = 'SL {SL} reached'
+
+        #if LastPrice < SL or LastPrice > TP and not USE_TRAILING_STOP_LOSS:
+        if sellCoin:    
+            print(f"{txcolors.SELL_PROFIT if PriceChangeIncFees_Perc >= 0. else txcolors.SELL_LOSS}{coin}: {sell_reason} - Selling {coins_bought[coin]['volume']} @ ${float(LastPrice):g} (Bought @ ${float(BuyPrice):g}). {PriceChangeIncFees_Perc:.2f}% Est: {(TRADE_TOTAL*PriceChangeIncFees_Perc)/100:.{decimals()}f} {PAIR_WITH}{txcolors.DEFAULT} (Inc Fees)")
             
             # try to create a real order
             try:
@@ -556,10 +595,9 @@ def check_total_session_profit(coins_bought, last_price):
 
     allsession_profits_perc = unrealised_session_profit_incfees_perc + session_profit_incfees_perc
 
-    if SESSION_TPSL_OVERRIDE:
-        if allsession_profits_perc >= float(SESSION_TAKE_PROFIT) or allsession_profits_perc <= float(SESSION_STOP_LOSS):
-            #BB Write out session state here!
-            is_bot_running = False
+    if allsession_profits_perc >= float(SESSION_TAKE_PROFIT) or allsession_profits_perc <= float(SESSION_STOP_LOSS):
+        #BB Write out session state here!
+        is_bot_running = False
 
 def update_portfolio(orders, last_price, volume):
     '''add every coin bought to our portfolio for tracking/selling later'''
@@ -606,12 +644,29 @@ def remove_from_portfolio(coins_sold):
         coins_bought.pop(coin)
     with open(coins_bought_file_path, 'w') as file:
         json.dump(coins_bought, file, indent=4)
-
+    if os.path.exists('signalsell_tickers.txt'):
+        os.remove('signalsell_tickers.txt')
+        for coin in coins_bought:
+            write_signallsell(coin.removesuffix(PAIR_WITH))
+    
 
 def write_log(logline):
     timestamp = datetime.now().strftime("%d/%m %H:%M:%S")
     with open(LOG_FILE,'a+') as f:
         f.write(timestamp + ' ' + logline + '\n')
+
+def write_signallsell(symbol):
+    with open('signalsell_tickers.txt','a+') as f:
+        f.write(f'{symbol}\n')
+
+def remove_external_signals(fileext):
+    signals = glob.glob('signals/*.{fileext}')
+    for filename in signals:
+        for line in open(filename):
+            try:
+                os.remove(filename)
+            except:
+                if DEBUG: print(f'{txcolors.WARNING}Could not remove external signalling file {filename}{txcolors.DEFAULT}')
 
 if __name__ == '__main__':
 
@@ -669,6 +724,10 @@ if __name__ == '__main__':
     SESSION_TAKE_PROFIT = parsed_config['trading_options']['SESSION_TAKE_PROFIT']
     SESSION_STOP_LOSS = parsed_config['trading_options']['SESSION_STOP_LOSS']
 
+    # Borrowed from DJCommie fork
+    # If TRUE, coin will only sell based on an external SELL signal
+    SELL_ON_SIGNAL_ONLY = parsed_config['trading_options']['SELL_ON_SIGNAL_ONLY']
+    
     TRADING_FEE = parsed_config['trading_options']['TRADING_FEE']
     SIGNALLING_MODULES = parsed_config['trading_options']['SIGNALLING_MODULES']
 
@@ -716,6 +775,8 @@ if __name__ == '__main__':
     # use separate files for testing and live trading
     LOG_FILE = file_prefix + LOG_FILE
 
+    #     
+
     if os.path.isfile(bot_stats_file_path) and os.stat(bot_stats_file_path).st_size!= 0:
         with open(bot_stats_file_path) as file:
             bot_stats = json.load(file)
@@ -745,19 +806,9 @@ if __name__ == '__main__':
             print('WARNING: Waiting 10 seconds before live trading as a security measure!')
             time.sleep(10)
 
-    signals = glob.glob("signals/*.exs")
-    for filename in signals:
-        for line in open(filename):
-            try:
-                os.remove(filename)
-            except:
-                if DEBUG: print(f'{txcolors.WARNING}Could not remove external signalling file {filename}{txcolors.DEFAULT}')
-
-    if os.path.isfile("signals/paused.exc"):
-        try:
-            os.remove("signals/paused.exc")
-        except:
-            if DEBUG: print(f'{txcolors.WARNING}Could not remove external signalling file {filename}{txcolors.DEFAULT}')
+    remove_external_signals('buy')
+    remove_external_signals('sell')
+    remove_external_signals('pause')
 
     # load signalling modules
     try:
