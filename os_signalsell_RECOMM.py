@@ -21,6 +21,11 @@ DEBUG = True
 TIME_TO_WAIT = 1 # Minutes to wait between analysis
 SIGNAL_NAME = 'os_signalsell_RECOMM'
 SIGNAL_FILE = 'signals/' + SIGNAL_NAME + '.sell'
+
+###
+### NOTE: The TICKERS file is created by the main "Binance Detect Moonings.py" module
+###       This is dynamically created based on the coins the bot is currently holding.
+###
 TICKERS = 'signalsell_tickers.txt'
 
 # if DEBUG: TICKERS = 'test_' + TICKERS

@@ -56,6 +56,11 @@ EXCHANGE = 'BINANCE'
 SCREENER = 'CRYPTO'
 PAIR_WITH = 'USDT'
 TICKERS = 'tickers.txt' #'signalsample.txt'
+
+###
+### NOTE: The SELL_TICKERS file is created by the main "Binance Detect Moonings.py" module
+###       This is dynamically created based on the coins the bot is currently holding.
+###
 SELL_TICKERS = 'signalsell_tickers.txt'
 
 TIME_TO_WAIT = 2 # Minutes to wait between analysis
@@ -112,7 +117,9 @@ def analyze(pairs):
             print (f'Coin: {pair}')
             print (f'handler: {handler[pair]}')
             print (f'handler2: {handler2[pair]}')
-            return
+            with open("tradingview_ta_unknown",'a+') as f:
+                    f.write(pair.removesuffix(PAIR_WITH) + '\n')
+            continue
 
         oscCheck=0
         maCheck=0
@@ -157,7 +164,8 @@ def analyze(pairs):
                 with open(SIGNAL_FILE_BUY,'a+') as f:
                     f.write(pair + '\n')
           else:
-            print(f'Signals RSI: {pair} - Stoch/RSI ok, not enough buy signals | {BUY_SIGS}_{BUY_SIGS2}/26 | {STOCH_DIFF}/{RSI_DIFF} | {STOCH_K}')
+            if FULL_LOG:
+                print(f'Signals RSI: {pair} - Stoch/RSI ok, not enough buy signals | {BUY_SIGS}_{BUY_SIGS2}/26 | {STOCH_DIFF}/{RSI_DIFF} | {STOCH_K}')
         
         if SELL_COINS:
          if (BUY_SIGS < SIGNALS_SELL) and (BUY_SIGS2 < SIGNALS_SELL) and (STOCH_DIFF < STOCH_SELL) and (RSI_DIFF < RSI_SELL) and (STOCH_K < STOCH_K1):

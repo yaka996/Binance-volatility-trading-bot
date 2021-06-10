@@ -33,7 +33,7 @@ init()
 # needed for the binance API / websockets / Exception handling
 from binance.client import Client
 from binance.exceptions import BinanceAPIException
-from requests.exceptions import ReadTimeout
+from requests.exceptions import ReadTimeout, ConnectionError
 
 # used for dates
 from datetime import date, datetime, timedelta
@@ -286,11 +286,13 @@ def balance_report(last_price):
         BuyPrice = float(coins_bought[coin]['bought_at'])
         buyFee = (BuyPrice * (TRADING_FEE/100))
 
-        PriceChangeIncFees_Perc = float(((LastPrice+sellFee) - (BuyPrice+buyFee)) / (BuyPrice+buyFee) * 100)
+        #PriceChangeIncFees_Perc = float(((LastPrice+sellFee) - (BuyPrice+buyFee)) / (BuyPrice+buyFee) * 100)
         PriceChangeIncFees_Total = float(((LastPrice+sellFee) - (BuyPrice+buyFee)) * coins_bought[coin]['volume'])
 
-        unrealised_session_profit_incfees_perc = float(unrealised_session_profit_incfees_perc + PriceChangeIncFees_Perc)
+        # unrealised_session_profit_incfees_perc = float(unrealised_session_profit_incfees_perc + PriceChangeIncFees_Perc)
         unrealised_session_profit_incfees_total = float(unrealised_session_profit_incfees_total + PriceChangeIncFees_Total)
+
+    unrealised_session_profit_incfees_perc = (unrealised_session_profit_incfees_total / BUDGET) * 100
 
     DECIMALS = int(decimals())
     CURRENT_EXPOSURE = round((TRADE_TOTAL * len(coins_bought)), DECIMALS)
@@ -471,6 +473,8 @@ def sell_coins():
     #last_price = get_price(add_to_historical=True) # don't populate rolling window
     coins_sold = {}
 
+    BUDGET = TRADE_TOTAL * TRADE_SLOTS
+
     if SESSION_TPSL_OVERRIDE:
         check_total_session_profit(coins_bought, last_price)
 
@@ -548,10 +552,12 @@ def sell_coins():
                 write_log(f"Sell: {coins_sold[coin]['volume']} {coin} - {BuyPrice} - {LastPrice} Profit: {profit_incfees_total:.{decimals()}f} {PAIR_WITH} ({PriceChange_Perc:.2f}%)")
                 
                 #this is good
-                session_profit_incfees_perc = session_profit_incfees_perc + PriceChangeIncFees_Perc
                 session_profit_incfees_total = session_profit_incfees_total + profit_incfees_total
-                historic_profit_incfees_perc = historic_profit_incfees_perc + PriceChangeIncFees_Perc
+                session_profit_incfees_perc = session_profit_incfees_perc + ((profit_incfees_total/BUDGET) * 100)
+                
                 historic_profit_incfees_total = historic_profit_incfees_total + profit_incfees_total
+                historic_profit_incfees_perc = historic_profit_incfees_perc + ((profit_incfees_total/BUDGET) * 100)
+                
 
                 #TRADE_TOTAL*PriceChangeIncFees_Perc)/100
                 
@@ -576,7 +582,7 @@ def sell_coins():
 
 def check_total_session_profit(coins_bought, last_price):
     global session_profit_incfees_perc, session_profit_incfees_total, is_bot_running
-    
+    # BB check the maths in this section
     unrealised_session_profit_incfees_perc = 0
     BUDGET = TRADE_SLOTS * TRADE_TOTAL
     
@@ -827,7 +833,8 @@ if __name__ == '__main__':
 
     # seed initial prices
     get_price()
-    READ_TIMEOUT_COUNT=0
+    TIMEOUT_COUNT=0
+    READ_CONNECTERR_COUNT=0
 
     while is_bot_running:
         try:
@@ -837,8 +844,11 @@ if __name__ == '__main__':
             remove_from_portfolio(coins_sold)
             update_bot_stats()
         except ReadTimeout as rt:
-            READ_TIMEOUT_COUNT += 1
-            print(f'We got a timeout error from Binance. Re-loop. Connection Timeouts so far: {READ_TIMEOUT_COUNT}')
+            TIMEOUT_COUNT += 1
+            print(f'We got a timeout error from Binance. Re-loop. Connection Timeouts so far: {TIMEOUT_COUNT}')
+        except ConnectionError as ce:
+            READ_CONNECTERR_COUNT += 1
+            print(f'We got a connection error from Binance. Re-loop. Connection Errors so far: {READ_CONNECTERR_COUNT}')
 
     if not is_bot_running:
         if SESSION_TPSL_OVERRIDE:
