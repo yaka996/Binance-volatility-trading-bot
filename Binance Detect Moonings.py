@@ -518,14 +518,14 @@ def sell_coins():
         else:
             if LastPrice < SL: 
                 sellCoin = True
-                sell_reason = 'TP {TP} reached'
+                sell_reason = "TP " + TP + "reached"
             if LastPrice > TP:
                 sellCoin = True
-                sell_reason = 'SL {SL} reached'
+                sell_reason = "SL " + SL + "reached"
 
         #if LastPrice < SL or LastPrice > TP and not USE_TRAILING_STOP_LOSS:
-        if sellCoin:    
-            print(f"{txcolors.SELL_PROFIT if PriceChangeIncFees_Perc >= 0. else txcolors.SELL_LOSS}{coin}: {sell_reason} - Selling {coins_bought[coin]['volume']} @ ${float(LastPrice):g} (Bought @ ${float(BuyPrice):g}). {PriceChangeIncFees_Perc:.2f}% Est: {(TRADE_TOTAL*PriceChangeIncFees_Perc)/100:.{decimals()}f} {PAIR_WITH} (Inc Fees){txcolors.DEFAULT}")
+        if sellCoin:
+            print(f"{txcolors.SELL_PROFIT if PriceChangeIncFees_Perc >= 0. else txcolors.SELL_LOSS}Sell: {coins_bought[coin]['volume']} of {coin} | {sell_reason} | ${float(LastPrice):g} - ${float(BuyPrice):g} | Profit: {PriceChangeIncFees_Perc:.2f}% Est: {(TRADE_TOTAL*PriceChangeIncFees_Perc)/100:.{decimals()}f} {PAIR_WITH} (Inc Fees){txcolors.DEFAULT}")
             
             # try to create a real order
             try:
@@ -575,7 +575,7 @@ def sell_coins():
         # no action; print once every TIME_DIFFERENCE
         if hsp_head == 1:
             if len(coins_bought) > 0:
-                print(f"Holding Qty: {coins_bought[coin]['volume']} of {coin} - Buy: ${BuyPrice} Current: ${LastPrice}. P/L (inc Fees): {txcolors.SELL_PROFIT if PriceChangeIncFees_Perc >= 0. else txcolors.SELL_LOSS}{PriceChangeIncFees_Perc:.4f}% ({(TRADE_TOTAL*PriceChangeIncFees_Perc)/100:.{decimals()}f} {PAIR_WITH}){txcolors.DEFAULT}")
+                print(f"Holding: {coins_bought[coin]['volume']} of {coin} | {LastPrice} - {BuyPrice} | Profit: {txcolors.SELL_PROFIT if PriceChangeIncFees_Perc >= 0. else txcolors.SELL_LOSS}{PriceChangeIncFees_Perc:.4f}% Est: ({(TRADE_TOTAL*PriceChangeIncFees_Perc)/100:.{decimals()}f} {PAIR_WITH}){txcolors.DEFAULT}")
 
     if hsp_head == 1 and len(coins_bought) == 0: print(f"No trade slots are currently in use")
 
