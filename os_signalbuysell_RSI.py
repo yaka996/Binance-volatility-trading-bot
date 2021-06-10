@@ -70,6 +70,8 @@ SIGNAL_NAME = 'os_signalbuysell_RSI'
 SIGNAL_FILE_BUY = 'signals/' + SIGNAL_NAME + '.buy'
 SIGNAL_FILE_SELL = 'signals/' + SIGNAL_NAME + '.sell'
 
+TRADINGVIEW_EX_FILE = 'tradingview_ta_unknown'
+
 ########################################
 # Do NOT edit settings below these lines
 ########################################
@@ -88,8 +90,8 @@ def analyze(pairs):
     if os.path.exists(SIGNAL_FILE_SELL):
         os.remove(SIGNAL_FILE_SELL)
         
-    if os.path.exists('signals/custsignalmod.sell'):
-        os.remove('signals/custsignalmod.sell')
+    if os.path.exists(TRADINGVIEW_EX_FILE):
+        os.remove(TRADINGVIEW_EX_FILE)
 
     for pair in pairs:
         handler[pair] = TA_Handler(
@@ -117,7 +119,7 @@ def analyze(pairs):
             print (f'Coin: {pair}')
             print (f'handler: {handler[pair]}')
             print (f'handler2: {handler2[pair]}')
-            with open("tradingview_ta_unknown",'a+') as f:
+            with open(TRADINGVIEW_EX_FILE,'a+') as f:
                     f.write(pair.removesuffix(PAIR_WITH) + '\n')
             continue
 

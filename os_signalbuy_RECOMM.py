@@ -22,6 +22,7 @@ FULL_LOG = True # List anylysis result to console
 SIGNAL_NAME = 'os_signalbuy_RECOMM'
 SIGNAL_FILE = 'signals/' + SIGNAL_NAME + '.buy'
 TICKERS = 'tickers.txt'
+TRADINGVIEW_EX_FILE = 'tradingview_ta_unknown'
 
 def analyze(pairs):
     taMax = 0
@@ -36,6 +37,9 @@ def analyze(pairs):
     
     if os.path.exists(SIGNAL_FILE):
         os.remove(SIGNAL_FILE)
+
+    if os.path.exists(TRADINGVIEW_EX_FILE):
+        os.remove(TRADINGVIEW_EX_FILE)
 
     for pair in pairs:
         first_handler[pair] = TA_Handler(
@@ -74,7 +78,9 @@ def analyze(pairs):
             print (f'First handler: {first_handler[pair]}')
             print (f'Second handler: {second_handler[pair]}')
             print (f'Second handler: {third_handler[pair]}')
-            return
+            with open(TRADINGVIEW_EX_FILE,'a+') as f:
+                    f.write(pair.removesuffix(PAIR_WITH) + '\n')
+            continue
                
         first_recommendation = first_analysis.summary['RECOMMENDATION']
         second_recommendation = second_analysis.summary['RECOMMENDATION']

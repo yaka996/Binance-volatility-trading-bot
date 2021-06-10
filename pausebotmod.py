@@ -12,6 +12,8 @@ THRESHOLD = 7 # 7 of 15 MA's indicating sell
 TIME_TO_WAIT = 1 # Minutes to wait between analysis
 FULL_LOG = False # List analysis result to console
 
+TRADINGVIEW_EX_FILE = 'tradingview_ta_unknown'
+
 def analyze():
     analysis = {}
     handler = {}
@@ -29,6 +31,7 @@ def analyze():
         print("pausebotmod:")
         print("Exception:")
         print(e)
+        return
     
     ma_sell = analysis.moving_averages['SELL']
     if ma_sell >= THRESHOLD:
