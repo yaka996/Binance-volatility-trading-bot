@@ -67,9 +67,10 @@ class txcolors:
 
 
 # tracks profit/loss each session
-global session_profit_incfees_perc, session_profit_incfees_total, is_bot_running
+global session_profit_incfees_perc, session_profit_incfees_total, session_tpsl_override_msg, is_bot_running
 session_profit_incfees_perc = 0
 session_profit_incfees_total = 0
+session_tpsl_override_msg = ""
 is_bot_running = True
 
 global historic_profit_incfees_perc, historic_profit_incfees_total, trade_wins, trade_losses
@@ -211,7 +212,8 @@ def wait_for_price():
 
                 else:
                     print(f'{txcolors.WARNING}{coin} has gained {round(threshold_check, 3)}% within the last {TIME_DIFFERENCE} minutes, but you are using all available trade slots!{txcolors.DEFAULT}')
-
+            #else:
+                # if DEBUG: print(f'{txcolors.WARNING}{coin} has gained {round(threshold_check, 3)}% within the last {TIME_DIFFERENCE} minutes, but failed cool off period of {COOLOFF_PERIOD} minutes!{txcolors.DEFAULT}')
         elif threshold_check < CHANGE_IN_PRICE:
             coins_down +=1
 
@@ -523,7 +525,7 @@ def sell_coins():
 
         #if LastPrice < SL or LastPrice > TP and not USE_TRAILING_STOP_LOSS:
         if sellCoin:    
-            print(f"{txcolors.SELL_PROFIT if PriceChangeIncFees_Perc >= 0. else txcolors.SELL_LOSS}{coin}: {sell_reason} - Selling {coins_bought[coin]['volume']} @ ${float(LastPrice):g} (Bought @ ${float(BuyPrice):g}). {PriceChangeIncFees_Perc:.2f}% Est: {(TRADE_TOTAL*PriceChangeIncFees_Perc)/100:.{decimals()}f} {PAIR_WITH}{txcolors.DEFAULT} (Inc Fees)")
+            print(f"{txcolors.SELL_PROFIT if PriceChangeIncFees_Perc >= 0. else txcolors.SELL_LOSS}{coin}: {sell_reason} - Selling {coins_bought[coin]['volume']} @ ${float(LastPrice):g} (Bought @ ${float(BuyPrice):g}). {PriceChangeIncFees_Perc:.2f}% Est: {(TRADE_TOTAL*PriceChangeIncFees_Perc)/100:.{decimals()}f} {PAIR_WITH} (Inc Fees){txcolors.DEFAULT}")
             
             # try to create a real order
             try:
@@ -581,12 +583,11 @@ def sell_coins():
 
 
 def check_total_session_profit(coins_bought, last_price):
-    global session_profit_incfees_perc, session_profit_incfees_total, is_bot_running
-    # BB check the maths in this section
-    unrealised_session_profit_incfees_perc = 0
+    global is_bot_running, session_tpsl_override_msg
+    unrealised_session_profit_incfees_total = 0
+    
     BUDGET = TRADE_SLOTS * TRADE_TOTAL
     
-    # unrealised_session_profit_incfees_perc = session_profit_incfees_perc
     for coin in list(coins_bought):
         LastPrice = float(last_price[coin]['price'])
         sellFee = (LastPrice * (TRADING_FEE/100))
@@ -594,15 +595,19 @@ def check_total_session_profit(coins_bought, last_price):
         BuyPrice = float(coins_bought[coin]['bought_at'])
         buyFee = (BuyPrice * (TRADING_FEE/100))
         
-        # PriceChange_Perc = float((LastPrice - BuyPrice) / BuyPrice * 100)
-        PriceChangeIncFees_Perc = float(((LastPrice+sellFee) - (BuyPrice+buyFee)) / (BuyPrice+buyFee) * 100)
+        PriceChangeIncFees_Total = float(((LastPrice+sellFee) - (BuyPrice+buyFee)) * coins_bought[coin]['volume'])
 
-        unrealised_session_profit_incfees_perc = float(unrealised_session_profit_incfees_perc + PriceChangeIncFees_Perc)
+        unrealised_session_profit_incfees_total = float(unrealised_session_profit_incfees_total + PriceChangeIncFees_Total)
 
-    allsession_profits_perc = unrealised_session_profit_incfees_perc + session_profit_incfees_perc
+    allsession_profits_perc = session_profit_incfees_perc +  ((unrealised_session_profit_incfees_total / BUDGET) * 100)
 
-    if allsession_profits_perc >= float(SESSION_TAKE_PROFIT) or allsession_profits_perc <= float(SESSION_STOP_LOSS):
-        #BB Write out session state here!
+    if DEBUG: print(f'Session Override SL Feature: ASPP={allsession_profits_perc} STP {SESSION_TAKE_PROFIT} SSL {SESSION_STOP_LOSS}')
+    
+    if allsession_profits_perc >= float(SESSION_TAKE_PROFIT): 
+        session_tpsl_override_msg = "Session TP Override target of " + str(SESSION_TAKE_PROFIT) + "% met. TODO Sell all coins now!"
+        is_bot_running = False
+    if allsession_profits_perc <= float(SESSION_STOP_LOSS):
+        session_tpsl_override_msg = "Session SL Override target of " + str(SESSION_STOP_LOSS) + "% met. TODO Sell all coins now!"
         is_bot_running = False
 
 def update_portfolio(orders, last_price, volume):
@@ -717,6 +722,8 @@ if __name__ == '__main__':
     STOP_LOSS = parsed_config['trading_options']['STOP_LOSS']
     TAKE_PROFIT = parsed_config['trading_options']['TAKE_PROFIT']
     
+    # COOLOFF_PERIOD = parsed_config['trading_options']['COOLOFF_PERIOD']
+
     CUSTOM_LIST = parsed_config['trading_options']['CUSTOM_LIST']
     TICKERS_LIST = parsed_config['trading_options']['TICKERS_LIST']
     
@@ -854,8 +861,13 @@ if __name__ == '__main__':
         if SESSION_TPSL_OVERRIDE:
             print(f'')
             print(f'')
-            print(f'Session target met or exceeded targets. TODO Sell all coins now!')
+            print(f'{txcolors.WARNING}{session_tpsl_override_msg}{txcolors.DEFAULT}')
+            #TODO activate pause so no chance of buying coins
             #TODO sell all coins NOW!
+            #TODO display outcome of the sale
+            
+            last_price = get_price()
+            balance_report(last_price)
         else:
             print(f'')
             print(f'')
