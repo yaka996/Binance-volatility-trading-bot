@@ -201,9 +201,11 @@ def wait_for_price():
 
             if coin not in volatility_cooloff:
                 volatility_cooloff[coin] = datetime.now() - timedelta(minutes=TIME_DIFFERENCE)
-
+                # volatility_cooloff[coin] = datetime.now() - timedelta(minutes=COOLOFF_PERIOD)
+            
             # only include coin as volatile if it hasn't been picked up in the last TIME_DIFFERENCE minutes already
             if datetime.now() >= volatility_cooloff[coin] + timedelta(minutes=TIME_DIFFERENCE):
+            #if datetime.now() >= volatility_cooloff[coin] + timedelta(minutes=COOLOFF_PERIOD):
                 volatility_cooloff[coin] = datetime.now()
 
                 if len(coins_bought) + len(volatile_coins) < TRADE_SLOTS or TRADE_SLOTS == 0:
@@ -213,7 +215,10 @@ def wait_for_price():
                 else:
                     print(f'{txcolors.WARNING}{coin} has gained {round(threshold_check, 3)}% within the last {TIME_DIFFERENCE} minutes, but you are using all available trade slots!{txcolors.DEFAULT}')
             #else:
-                # if DEBUG: print(f'{txcolors.WARNING}{coin} has gained {round(threshold_check, 3)}% within the last {TIME_DIFFERENCE} minutes, but failed cool off period of {COOLOFF_PERIOD} minutes!{txcolors.DEFAULT}')
+                #if len(coins_bought) == TRADE_SLOTS:
+                #    print(f'{txcolors.WARNING}{coin} has gained {round(threshold_check, 3)}% within the last {TIME_DIFFERENCE} minutes, but you are using all available trade slots!{txcolors.DEFAULT}')
+                #else:
+                #    print(f'{txcolors.WARNING}{coin} has gained {round(threshold_check, 3)}% within the last {TIME_DIFFERENCE} minutes, but failed cool off period of {COOLOFF_PERIOD} minutes! Curr COP is {volatility_cooloff[coin] + timedelta(minutes=COOLOFF_PERIOD)}{txcolors.DEFAULT}')
         elif threshold_check < CHANGE_IN_PRICE:
             coins_down +=1
 
@@ -518,10 +523,10 @@ def sell_coins():
         else:
             if LastPrice < SL: 
                 sellCoin = True
-                sell_reason = "TP " + TP + "reached"
+                sell_reason = "TP " + str(TP) + "reached"
             if LastPrice > TP:
                 sellCoin = True
-                sell_reason = "SL " + SL + "reached"
+                sell_reason = "SL " + str(SL) + "reached"
 
         #if LastPrice < SL or LastPrice > TP and not USE_TRAILING_STOP_LOSS:
         if sellCoin:
@@ -722,7 +727,7 @@ if __name__ == '__main__':
     STOP_LOSS = parsed_config['trading_options']['STOP_LOSS']
     TAKE_PROFIT = parsed_config['trading_options']['TAKE_PROFIT']
     
-    # COOLOFF_PERIOD = parsed_config['trading_options']['COOLOFF_PERIOD']
+    COOLOFF_PERIOD = parsed_config['trading_options']['COOLOFF_PERIOD']
 
     CUSTOM_LIST = parsed_config['trading_options']['CUSTOM_LIST']
     TICKERS_LIST = parsed_config['trading_options']['TICKERS_LIST']
