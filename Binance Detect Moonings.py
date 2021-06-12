@@ -26,6 +26,9 @@ import importlib
 # used for directory handling
 import glob
 
+#discord needs import request
+import requests
+
 # Needed for colorful console output Install with: python3 -m pip install colorama (Mac/Linux) or pip install colorama (PC)
 from colorama import init
 init()
@@ -52,7 +55,8 @@ from helpers.parameters import (
 
 # Load creds modules
 from helpers.handle_creds import (
-    load_correct_creds, test_api_key
+    load_correct_creds, test_api_key,
+    load_discord_creds
 )
 
 
@@ -184,7 +188,8 @@ def wait_for_price():
     # retrieve latest prices
     last_price = get_price()
 
-    balance_report(last_price)
+    # Moved to the end of this method
+    # balance_report(last_price)
 
     # calculate the difference in prices
     for coin in historical_prices[hsp_head]:
@@ -238,6 +243,8 @@ def wait_for_price():
             volatile_coins[excoin] = 1
             exnumber +=1
             print(f"External signal received on {excoin}, purchasing ${TRADE_TOTAL} {PAIR_WITH} value of {excoin}!")
+
+    balance_report(last_price)
 
     return volatile_coins, len(volatile_coins), historical_prices[hsp_head]
 
@@ -329,8 +336,36 @@ def balance_report(last_price):
     print(f'--------')
     print(f'')
     
+    msg = str(DATETIMESTARTED) + " | " + str(datetime.now() - DATETIMESTARTED) + " | " + str(len(coins_bought)) + "/" + str(TRADE_SLOTS)
+    msg = msg + ' SPR%: ' + str(round(session_profit_incfees_perc,2)) + ' SPR$: ' + str(round(session_profit_incfees_total,4))
+    msg = msg + ' SPU%: ' + str(round(unrealised_session_profit_incfees_perc,2)) + ' SPU$: ' + str(round(unrealised_session_profit_incfees_total,4))
+    msg = msg + ' SPT%: ' + str(round(session_profit_incfees_perc + unrealised_session_profit_incfees_perc,2)) + ' SPT$: ' + str(round(session_profit_incfees_total+unrealised_session_profit_incfees_total,4))
+    msg = msg + ' ATP%: ' + str(round(historic_profit_incfees_perc,2)) + ' ATP$: ' + str(round(historic_profit_incfees_total,4))
+    msg = msg + ' CTT: ' + str(trade_wins+trade_losses) + ' CTW: ' + str(trade_wins) + ' CTL: ' + str(trade_losses) + ' CTWR: ' + str(round(WIN_LOSS_PERCENT,2))
+
+    msg_discord_balance(msg)
+
     return
 
+def msg_discord_balance(msg):
+    global last_msg_discord_balance_date
+    time_between_insertion = datetime.now() - last_msg_discord_balance_date
+    
+    # only put the balance message to discord once every 60 seconds
+    if time_between_insertion.seconds > 60:
+        last_msg_discord_balance_date = datetime.now()
+        msg_discord(msg) 
+
+def msg_discord(msg):
+
+    message = msg + '\n\n'
+
+    if MSG_DISCORD:
+        #Webhook of my channel. Click on edit channel --> Webhooks --> Creates webhook
+        mUrl = "https://discordapp.com/api/webhooks/"+DISCORD_WEBHOOK
+        data = {"content": message}
+        response = requests.post(mUrl, json=data)
+        print(response.content)
 
 def pause_bot():
     '''Pause the script when external indicators detect a bearish trend in the market'''
@@ -343,15 +378,21 @@ def pause_bot():
 
         if bot_paused == False:
             print(f'{txcolors.WARNING}Buying paused due to negative market conditions, stop loss and take profit will continue to work...{txcolors.DEFAULT}')
+            
+            msg = 'PAUSEBOT. T:' + str(datetime.now()) + '. Buying paused due to negative market conditions, stop loss and take profit will continue to work...'
+            msg_discord(msg)
+
             bot_paused = True
 
         # Sell function needs to work even while paused
         coins_sold = sell_coins()
         remove_from_portfolio(coins_sold)
-        get_price(True)
+        last_price = get_price(True)
 
         # pausing here
-        if hsp_head == 1: print(f'Paused...Session profit: {session_profit_incfees_perc:.2f}% Est: ${session_profit_incfees_total:.{decimals()}f} {PAIR_WITH}')
+        if hsp_head == 1: 
+            # print(f'Paused...Session profit: {session_profit_incfees_perc:.2f}% Est: ${session_profit_incfees_total:.{decimals()}f} {PAIR_WITH}')
+            balance_report(last_price)
         time.sleep((TIME_DIFFERENCE * 60) / RECHECK_INTERVAL)
 
     else:
@@ -362,6 +403,10 @@ def pause_bot():
         # resume the bot and ser pause_bot to False
         if  bot_paused == True:
             print(f'{txcolors.WARNING}Resuming buying due to positive market conditions, total sleep time: {time_elapsed}{txcolors.DEFAULT}')
+            
+            msg = 'PAUSEBOT. T:' + str(datetime.now()) + '. Resuming buying due to positive market conditions, total sleep time: ' + str(time_elapsed)
+            msg_discord(msg)
+
             bot_paused = False
 
     return
@@ -416,6 +461,9 @@ def buy():
 
         if coin not in coins_bought:
             print(f"{txcolors.BUY}Preparing to buy {volume[coin]} of {coin} @ ${last_price[coin]['price']}{txcolors.DEFAULT}")
+
+            msg1 = 'BUY: ' + coin + '. T:' + str(datetime.now()) + ' V:' +  str(volume[coin]) + ' P$:' + str(last_price[coin]['price'])
+            msg_discord(msg1)
 
             if TEST_MODE:
                 orders[coin] = [{
@@ -532,6 +580,9 @@ def sell_coins():
         if sellCoin:
             print(f"{txcolors.SELL_PROFIT if PriceChangeIncFees_Perc >= 0. else txcolors.SELL_LOSS}Sell: {coins_bought[coin]['volume']} of {coin} | {sell_reason} | ${float(LastPrice):g} - ${float(BuyPrice):g} | Profit: {PriceChangeIncFees_Perc:.2f}% Est: {(TRADE_TOTAL*PriceChangeIncFees_Perc)/100:.{decimals()}f} {PAIR_WITH} (Inc Fees){txcolors.DEFAULT}")
             
+            msg1 = 'SELL: ' + coin + '. T:' + str(datetime.now()) + ' R:' +  sell_reason + ' P%:' + str(round(PriceChangeIncFees_Perc,2)) + ' P$:' + str(round((TRADE_TOTAL*PriceChangeIncFees_Perc)/100,4))
+            msg_discord(msg1)
+
             # try to create a real order
             try:
                 if not TEST_MODE:
@@ -574,6 +625,7 @@ def sell_coins():
                     trade_losses += 1
 
                 update_bot_stats()
+                balance_report(last_price)
 
             continue
 
@@ -691,6 +743,7 @@ if __name__ == '__main__':
     mymodule = {}
 
     DATETIMESTARTED = datetime.now()
+    last_msg_discord_balance_date = datetime.now()
 
     # set to false at Start
     global bot_paused
@@ -745,6 +798,10 @@ if __name__ == '__main__':
     # Borrowed from DJCommie fork
     # If TRUE, coin will only sell based on an external SELL signal
     SELL_ON_SIGNAL_ONLY = parsed_config['trading_options']['SELL_ON_SIGNAL_ONLY']
+
+    # Discord integration
+    # Used to push alerts, messages etc to a discord channel
+    MSG_DISCORD = parsed_config['trading_options']['MSG_DISCORD']
     
     TRADING_FEE = parsed_config['trading_options']['TRADING_FEE']
     SIGNALLING_MODULES = parsed_config['trading_options']['SIGNALLING_MODULES']
@@ -759,6 +816,8 @@ if __name__ == '__main__':
         print(f'Loaded config below\n{json.dumps(parsed_config, indent=4)}')
         print(f'Your credentials have been loaded from {creds_file}')
 
+    if MSG_DISCORD:
+        DISCORD_WEBHOOK = load_discord_creds(parsed_creds)
 
     # Authenticate with the client, Ensure API key is good before continuing
     if AMERICAN_USER:

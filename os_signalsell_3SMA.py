@@ -23,8 +23,6 @@ class txcolors:
 INTERVAL1MIN = Interval.INTERVAL_1_MINUTE # Main Timeframe for analysis on Oscillators and Moving Averages (15 mins)
 INTERVAL5MIN = Interval.INTERVAL_5_MINUTES # Main Timeframe for analysis on Oscillators and Moving Averages (15 mins)
 
-SELL_COINS = True # Set to true if you want the module to sell coins immediately upon bearish signals (False)
-
 EXCHANGE = 'BINANCE'
 SCREENER = 'CRYPTO'
 PAIR_WITH = 'USDT'
@@ -103,22 +101,28 @@ def analyze(pairs):
         ACTION = 'NOTHING'
         
         # Sell condition on the 1 minute indicator
-        if (SMA20_1MIN > SMA10_1MIN) and (SMA10_1MIN > SMA5_1MIN):
-            # Buy condition on the 5 minute indicator
-            if (SMA20_5MIN < SMA10_5MIN) and (SMA10_5MIN < SMA5_5MIN):
-                # i.e. 5 minutes ago it was a buy, but now it's a sell
-                ACTION = 'SELL'
+        # Buy condition on the 1 minute indicator
+        if (SMA5_1MIN < SMA10_1MIN) or (SMA5_1MIN < SMA20_1MIN):            
+            # SMA5 = green
+            # SMA10 = blue 
+            # SMA20 = red
+            ACTION = 'SELL'
 
         # if DEBUG:
         print(f'{SIGNAL_NAME} Signals {pair} {ACTION} - SMA20_1MIN: {SMA20_1MIN} SMA10_1MIN: {SMA10_1MIN} SMA5_1MIN: {SMA5_1MIN}')
         print(f'{SIGNAL_NAME} Signals {pair} {ACTION} - SMA20_5MIN: {SMA20_5MIN} SMA10_5MIN: {SMA10_5MIN} SMA5_5MIN: {SMA5_5MIN}')
       
         if ACTION == 'SELL':
-            if SELL_COINS:
-                if DEBUG:
-                    print(f'{txcolors.WARNING}{SIGNAL_NAME}: {pair} - Sell Signal Detected{txcolors.DEFAULT}')
-                with open(SIGNAL_FILE_SELL,'a+') as f:
-                    f.write(pair + '\n')
+            if DEBUG:
+                print(f'{txcolors.WARNING}{SIGNAL_NAME}: {pair} - Sell Signal Detected{txcolors.DEFAULT}')
+            with open(SIGNAL_FILE_SELL,'a+') as f:
+                f.write(pair + '\n')
+
+            timestamp = datetime.now().strftime("%d/%m %H:%M:%S")
+            with open(SIGNAL_NAME + '.log','a+') as f:
+                f.write(timestamp + ' ' + pair + '\n')
+                f.write(f'    Signals: {ACTION} - SMA20_1MIN: {SMA20_1MIN} SMA10_1MIN: {SMA10_1MIN} SMA5_1MIN: {SMA5_1MIN}\n')
+                f.write(f'    Signals: {ACTION} - SMA20_5MIN: {SMA20_5MIN} SMA10_5MIN: {SMA10_5MIN} SMA5_5MIN: {SMA5_5MIN}\n')
         
         if ACTION == 'NOTHING':
             if DEBUG:

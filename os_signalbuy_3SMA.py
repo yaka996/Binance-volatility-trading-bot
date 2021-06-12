@@ -93,11 +93,11 @@ def analyze(pairs):
         ACTION = 'NOTHING'
         
         # Buy condition on the 1 minute indicator
-        if (SMA20_1MIN < SMA10_1MIN) and (SMA10_1MIN < SMA5_1MIN):
-            # Sell condition on the 5 minute indicator
-            if (SMA20_5MIN > SMA10_5MIN) and (SMA10_5MIN > SMA5_5MIN):
-                # i.e. 5 minutes ago it was a sell, but now it's a buy
-                ACTION = 'BUY'
+        if (SMA5_1MIN > SMA10_1MIN) or (SMA5_1MIN > SMA20_1MIN):            
+            # SMA5 = green
+            # SMA10 = blue 
+            # SMA20 = red
+            ACTION = 'BUY'
 
         # if DEBUG:
         print(f'{SIGNAL_NAME} Signals {pair} {ACTION} - SMA20_1MIN: {SMA20_1MIN} SMA10_1MIN: {SMA10_1MIN} SMA5_1MIN: {SMA5_1MIN}')
@@ -113,8 +113,8 @@ def analyze(pairs):
             timestamp = datetime.now().strftime("%d/%m %H:%M:%S")
             with open(SIGNAL_NAME + '.log','a+') as f:
                 f.write(timestamp + ' ' + pair + '\n')
-                f.write(f'    Signals: {ACTION} - SMA20_1MIN: {SMA20_1MIN} SMA10_1MIN: {SMA10_1MIN} SMA5_1MIN: {SMA5_1MIN}')
-                f.write(f'    Signals: {ACTION} - SMA20_5MIN: {SMA20_5MIN} SMA10_5MIN: {SMA10_5MIN} SMA5_5MIN: {SMA5_5MIN}')
+                f.write(f'    Signals: {ACTION} - SMA20_1MIN: {SMA20_1MIN} SMA10_1MIN: {SMA10_1MIN} SMA5_1MIN: {SMA5_1MIN}\n')
+                f.write(f'    Signals: {ACTION} - SMA20_5MIN: {SMA20_5MIN} SMA10_5MIN: {SMA10_5MIN} SMA5_5MIN: {SMA5_5MIN}\n')
                 
         if ACTION == 'NOTHING':
             if DEBUG:

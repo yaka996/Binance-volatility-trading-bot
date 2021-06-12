@@ -83,6 +83,10 @@ trading_options:
   # If using 0.75% (using BNB for fees) you must have BNB in your account to cover trading fees.
   # If using BNB for fees, it MUST be enabled in your Binance 'Dashboard' page (checkbox).
   TRADING_FEE: 0.75
+
+  # Discord integration
+  # Used to push alerts, messages etc to a discord channel
+  MSG_DISCORD: False
   
   SIGNALLING_MODULES:
     # NOTE: Only use the "os_xxxxxxxxx" signal/pause modules with this fork as 
