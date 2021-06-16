@@ -30,7 +30,7 @@ SCREENER = 'CRYPTO'
 PAIR_WITH = 'USDT'
 TICKERS = 'tickers.txt' #'signalsample.txt'
 
-TIME_TO_WAIT = 1 # Minutes to wait between analysis
+TIME_TO_WAIT = 5 # Minutes to wait between analysis
 DEBUG = False # List analysis result to console
 
 SIGNAL_NAME = 'os_signalbuys_3SMA'
@@ -107,6 +107,7 @@ def analyze(pairs):
             signal_coins[pair] = pair
             if DEBUG:
                 print(f'{txcolors.BUY}{SIGNAL_NAME}: {pair} - Buy Signal Detected{txcolors.DEFAULT}')
+            
             with open(SIGNAL_FILE_BUY,'a+') as f:
                 f.write(pair + '\n')
             
@@ -123,8 +124,8 @@ def analyze(pairs):
     return signal_coins
 
 def do_work():
-    try:
-        while True:
+    while True:
+        try:
             if not os.path.exists(TICKERS):
                 time.sleep((TIME_TO_WAIT*60))
                 continue
@@ -146,5 +147,6 @@ def do_work():
             print(f'{SIGNAL_NAME}: {len(signal_coins)} coins with Buy Signals. Waiting {TIME_TO_WAIT} minutes for next analysis.')
 
             time.sleep((TIME_TO_WAIT*60))
-    except Exception as e:
-            print(f'{SIGNAL_NAME}: Exception: {e}')
+        except Exception as e:
+            print(f'{SIGNAL_NAME}: Exception do_work(): {e}')
+            continue

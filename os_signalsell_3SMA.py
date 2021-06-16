@@ -33,7 +33,7 @@ PAIR_WITH = 'USDT'
 ###
 SELL_TICKERS = 'signalsell_tickers.txt'
 
-TIME_TO_WAIT = 1 # Minutes to wait between analysis
+TIME_TO_WAIT = 5 # Minutes to wait between analysis
 DEBUG = False # List analysis result to console
 
 SIGNAL_NAME = 'os_signalsell_3SMA'
@@ -131,8 +131,8 @@ def analyze(pairs):
     return signal_coins
 
 def do_work():
-    try:
-        while True:
+    while True:
+        try:
             if not os.path.exists(SELL_TICKERS):
                 time.sleep((TIME_TO_WAIT*60))
                 continue
@@ -154,5 +154,6 @@ def do_work():
             print(f'{SIGNAL_NAME}: {len(signal_coins)} coins with Sell Signals. Waiting {TIME_TO_WAIT} minutes for next analysis.')
 
             time.sleep((TIME_TO_WAIT*60))
-    except Exception as e:
+        except Exception as e:
             print(f'{SIGNAL_NAME}: Exception: {e}')
+            continue
