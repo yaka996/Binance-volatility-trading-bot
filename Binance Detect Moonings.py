@@ -341,7 +341,7 @@ def balance_report(last_price):
     msg = msg + ' SPU%: ' + str(round(unrealised_session_profit_incfees_perc,2)) + ' SPU$: ' + str(round(unrealised_session_profit_incfees_total,4))
     msg = msg + ' SPT%: ' + str(round(session_profit_incfees_perc + unrealised_session_profit_incfees_perc,2)) + ' SPT$: ' + str(round(session_profit_incfees_total+unrealised_session_profit_incfees_total,4))
     msg = msg + ' ATP%: ' + str(round(historic_profit_incfees_perc,2)) + ' ATP$: ' + str(round(historic_profit_incfees_total,4))
-    msg = msg + ' CTT: ' + str(trade_wins+trade_losses) + ' CTW: ' + str(trade_wins) + ' CTL: ' + str(trade_losses) + ' CTWR: ' + str(round(WIN_LOSS_PERCENT,2))
+    msg = msg + ' CTT: ' + str(trade_wins+trade_losses) + ' CTW: ' + str(trade_wins) + ' CTL: ' + str(trade_losses) + ' CTWR%: ' + str(round(WIN_LOSS_PERCENT,2))
 
     msg_discord_balance(msg)
 
@@ -374,7 +374,10 @@ def pause_bot():
     # start counting for how long the bot has been paused
     start_time = time.perf_counter()
 
-    while os.path.isfile("signals/*.pause"):
+    while os.path.exists("signals/pausebot.pause"):
+
+        # do NOT accept any external signals to buy while in pausebot mode
+        remove_external_signals('buy')
 
         if bot_paused == False:
             print(f'{txcolors.WARNING}Buying paused due to negative market conditions, stop loss and take profit will continue to work...{txcolors.DEFAULT}')
@@ -393,6 +396,7 @@ def pause_bot():
         if hsp_head == 1: 
             # print(f'Paused...Session profit: {session_profit_incfees_perc:.2f}% Est: ${session_profit_incfees_total:.{decimals()}f} {PAIR_WITH}')
             balance_report(last_price)
+        
         time.sleep((TIME_DIFFERENCE * 60) / RECHECK_INTERVAL)
 
     else:
@@ -554,8 +558,8 @@ def sell_coins():
         if LastPrice > TP and USE_TRAILING_STOP_LOSS:
 
             # increasing TP by TRAILING_TAKE_PROFIT (essentially next time to readjust SL)
-            coins_bought[coin]['take_profit'] = PriceChange_Perc + TRAILING_TAKE_PROFIT
             coins_bought[coin]['stop_loss'] = coins_bought[coin]['take_profit'] - TRAILING_STOP_LOSS
+            coins_bought[coin]['take_profit'] = PriceChange_Perc + TRAILING_TAKE_PROFIT
 			# if DEBUG: print(f"{coin} TP reached, adjusting TP {coins_bought[coin]['take_profit']:.2f}  and SL {coins_bought[coin]['stop_loss']:.2f} accordingly to lock-in profit")
             if DEBUG: print(f"{coin} TP reached, adjusting TP {coins_bought[coin]['take_profit']:.{decimals()}f} and SL {coins_bought[coin]['stop_loss']:.{decimals()}f} accordingly to lock-in profit")
             continue
@@ -564,10 +568,10 @@ def sell_coins():
         sellCoin = False
         sell_reason = ""
         if SELL_ON_SIGNAL_ONLY:
+            # only sell if told to by external signal
             if coin in externals:
                 sellCoin = True
                 sell_reason = 'External Sell Signal'
-
         else:
             if LastPrice < SL: 
                 sellCoin = True
@@ -575,6 +579,9 @@ def sell_coins():
             if LastPrice > TP:
                 sellCoin = True
                 sell_reason = "SL " + str(SL) + "reached"
+            if coin in externals:
+                sellCoin = True
+                sell_reason = 'External Sell Signal'
 
         #if LastPrice < SL or LastPrice > TP and not USE_TRAILING_STOP_LOSS:
         if sellCoin:
