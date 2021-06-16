@@ -1,15 +1,3 @@
-# Based off GoGo pausebotmod.py
-
-from helpers.parameters import (
-    parse_args, load_config
-)
-# Load arguments then parse settings
-args = parse_args()
-#get config file
-DEFAULT_CONFIG_FILE = 'config.yml'
-config_file = args.config if args.config else DEFAULT_CONFIG_FILE
-parsed_config = load_config(config_file)
-
 from tradingview_ta import TA_Handler, Interval, Exchange
 import os
 import time
@@ -20,12 +8,9 @@ INTERVAL = Interval.INTERVAL_1_MINUTE #Timeframe for analysis
 EXCHANGE = 'BINANCE'
 SCREENER = 'CRYPTO'
 SYMBOL = 'BTCUSDT'
-TYPE = 'SELL'
-THRESHOLD = parsed_config['trading_options']['PAUSEBOTMOD_THRESHOLD'] # 7 of 15 MA's indicating sell
-TIME_TO_WAIT = parsed_config['trading_options']['TIME_DIFFERENCE'] # Minutes to wait between analysis
-FULL_LOG = parsed_config['trading_options']['VERBOSE_MODE'] # List analysis result to console
+TIME_TO_WAIT = 1
 SIGNAL_NAME = 'os_pausebot_MA'
-SIGNAL_FILE = 'signals/' + SIGNAL_NAME + '.pause'
+SIGNAL_FILE = 'signals/pausebot.pause'
 
 def analyze():
     analysis = {}
@@ -46,12 +31,16 @@ def analyze():
         print(e)
         return
 
-    ma_analysis = analysis.moving_averages[TYPE]
-    if ma_analysis >= THRESHOLD:
+    ma_analysis_sell = analysis.moving_averages['SELL']
+    ma_analysis_buy = analysis.moving_averages['BUY']
+    ma_analysis_neutral = analysis.moving_averages['NEUTRAL']
+
+    if ma_analysis_sell >= (ma_analysis_buy + ma_analysis_neutral):
+    # if ma_analysis >= THRESHOLD:
         paused = True
-        print(f'pausebotmod: {SYMBOL} Market not looking too good, bot paused from buying {ma_analysis}/{THRESHOLD} Waiting {TIME_TO_WAIT} minutes for next market checkup')
+        print(f'pausebotmod: {SYMBOL} Market not looking too good, bot paused from buying. SELL: {ma_analysis_sell} >= BUY/NEUTRAL: {ma_analysis_buy + ma_analysis_neutral} Waiting {TIME_TO_WAIT} minutes for next market checkup')
     else:
-        print(f'pausebotmod: {SYMBOL} Market looks ok, bot is running {ma_analysis}/{THRESHOLD} Waiting {TIME_TO_WAIT} minutes for next market checkup ')
+        print(f'pausebotmod: {SYMBOL} Market looks ok, bot is running. SELL: {ma_analysis_sell} <= BUY/NEUTAL: {ma_analysis_buy + ma_analysis_neutral} Waiting {TIME_TO_WAIT} minutes for next market checkup')
         paused = False
 
     return paused
