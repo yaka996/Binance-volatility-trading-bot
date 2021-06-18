@@ -3,6 +3,9 @@ import os
 import time
 import threading
 
+global lastprice
+lastprice = 0
+
 INTERVAL = Interval.INTERVAL_1_MINUTE #Timeframe for analysis
 
 EXCHANGE = 'BINANCE'
@@ -13,6 +16,8 @@ SIGNAL_NAME = 'os_pausebot_MA'
 SIGNAL_FILE = 'signals/pausebot.pause'
 
 def analyze():
+    global lastprice
+
     analysis = {}
     handler = {}
 
@@ -25,6 +30,7 @@ def analyze():
 
     try:
         analysis = handler.get_analysis()
+
     except Exception as e:
         print("pausebotmod:")
         print("Exception:")
@@ -34,14 +40,16 @@ def analyze():
     ma_analysis_sell = analysis.moving_averages['SELL']
     ma_analysis_buy = analysis.moving_averages['BUY']
     ma_analysis_neutral = analysis.moving_averages['NEUTRAL']
+    price = round(analysis.indicators['close'],4)
 
-    if ma_analysis_sell >= (ma_analysis_buy + ma_analysis_neutral):
-    # if ma_analysis >= THRESHOLD:
+    if ma_analysis_sell >= (ma_analysis_buy + ma_analysis_neutral) or price <= lastprice:       
         paused = True
-        print(f'pausebotmod: {SYMBOL} Market not looking too good, bot paused from buying. SELL: {ma_analysis_sell} >= BUY/NEUTRAL: {ma_analysis_buy + ma_analysis_neutral} Waiting {TIME_TO_WAIT} minutes for next market checkup')
+        print(f'pausebotmod: {SYMBOL} Market not looking too good, bot paused from buying. SELL indicators: {ma_analysis_sell}. BUY/NEUTRAL indicators: {ma_analysis_buy + ma_analysis_neutral}. P: {price} | LP: {lastprice} | Waiting {TIME_TO_WAIT} minutes for next market checkup')
     else:
-        print(f'pausebotmod: {SYMBOL} Market looks ok, bot is running. SELL: {ma_analysis_sell} <= BUY/NEUTAL: {ma_analysis_buy + ma_analysis_neutral} Waiting {TIME_TO_WAIT} minutes for next market checkup')
+        print(f'pausebotmod: {SYMBOL} Market looks ok, bot is running. SELL indicators: {ma_analysis_sell}. BUY/NEUTRAL indicators: {ma_analysis_buy + ma_analysis_neutral}. P: {price} | LP: {lastprice} | Waiting {TIME_TO_WAIT} minutes for next market checkup')
         paused = False
+
+    lastprice = price
 
     return paused
 #if __name__ == '__main__':
