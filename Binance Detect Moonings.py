@@ -525,7 +525,7 @@ def buy():
     return orders, last_price, volume
 
 
-def sell_coins():
+def sell_coins(tpsl_override = False):
     '''sell coins that have reached the STOP LOSS or TAKE PROFIT threshold'''
     global hsp_head, session_profit_incfees_perc, session_profit_incfees_total, coin_order_id, trade_wins, trade_losses, historic_profit_incfees_perc, historic_profit_incfees_total, sell_all_coins
     
@@ -536,10 +536,7 @@ def sell_coins():
     coins_sold = {}
 
     BUDGET = TRADE_TOTAL * TRADE_SLOTS
-
-    if SESSION_TPSL_OVERRIDE:
-        check_total_session_profit(coins_bought, last_price)
-
+    
     for coin in list(coins_bought):
         LastPrice = float(last_price[coin]['price'])
         sellFee = (LastPrice * (TRADING_FEE/100))
@@ -559,7 +556,7 @@ def sell_coins():
 
         # check that the price is above the take profit and readjust SL and TP accordingly if trialing stop loss used
         
-        if LastPrice > TP and USE_TRAILING_STOP_LOSS and not sell_all_coins:
+        if LastPrice > TP and USE_TRAILING_STOP_LOSS and not sell_all_coins and not tpsl_override:
             # increasing TP by TRAILING_TAKE_PROFIT (essentially next time to readjust SL)
             coins_bought[coin]['stop_loss'] = coins_bought[coin]['take_profit'] - TRAILING_STOP_LOSS
             coins_bought[coin]['take_profit'] = PriceChange_Perc + TRAILING_TAKE_PROFIT
@@ -589,6 +586,9 @@ def sell_coins():
         if sell_all_coins:
             sellCoin = True
             sell_reason = 'Sell All Coins'
+        if tpsl_override:
+            sellCoin = True
+            sell_reason = 'Session TPSL Override reached'
 
         if sellCoin:
             print(f"{txcolors.SELL_PROFIT if PriceChangeIncFees_Perc >= 0. else txcolors.SELL_LOSS}Sell: {coins_bought[coin]['volume']} of {coin} | {sell_reason} | ${float(LastPrice):g} - ${float(BuyPrice):g} | Profit: {PriceChangeIncFees_Perc:.2f}% Est: {(TRADE_TOTAL*PriceChangeIncFees_Perc)/100:.{decimals()}f} {PAIR_WITH} (Inc Fees){txcolors.DEFAULT}")
@@ -651,6 +651,8 @@ def sell_coins():
 
     if hsp_head == 1 and len(coins_bought) == 0: print(f"No trade slots are currently in use")
 
+    # if tpsl_override: is_bot_running = False
+
     return coins_sold
 
 
@@ -680,7 +682,7 @@ def check_total_session_profit(coins_bought, last_price):
         is_bot_running = False
     if allsession_profits_perc <= float(SESSION_STOP_LOSS):
         session_tpsl_override_msg = "Session SL Override target of " + str(SESSION_STOP_LOSS) + "% met. TODO Sell all coins now!"
-        is_bot_running = False
+        is_bot_running = False   
 
 def update_portfolio(orders, last_price, volume):
     '''add every coin bought to our portfolio for tracking/selling later'''
@@ -751,7 +753,7 @@ def remove_external_signals(fileext):
             except:
                 if DEBUG: print(f'{txcolors.WARNING}Could not remove external signalling file {filename}{txcolors.DEFAULT}')
 
-def sell_all(msgreason):
+def sell_all(msgreason, session_tspl_ovr = False):
     global sell_all_coins
 
     msg_discord(f'SELL ALL COINS: {msgreason}')
@@ -762,7 +764,7 @@ def sell_all(msgreason):
     # sell all coins NOW!
     sell_all_coins = True
 
-    coins_sold = sell_coins()
+    coins_sold = sell_coins(session_tspl_ovr)
     remove_from_portfolio(coins_sold)
     
     # display final info to screen
@@ -963,6 +965,10 @@ if __name__ == '__main__':
         try:
             orders, last_price, volume = buy()
             update_portfolio(orders, last_price, volume)
+            
+            if SESSION_TPSL_OVERRIDE:
+                check_total_session_profit(coins_bought, last_price)
+
             coins_sold = sell_coins()
             remove_from_portfolio(coins_sold)
             update_bot_stats()
@@ -992,7 +998,7 @@ if __name__ == '__main__':
             print(f'')
             print(f'{txcolors.WARNING}{session_tpsl_override_msg}{txcolors.DEFAULT}')
             
-            sell_all(session_tpsl_override_msg)
+            sell_all(session_tpsl_override_msg, True)
             sys.exit(0)
 
         else:
