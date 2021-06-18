@@ -30,6 +30,7 @@ trading_options:
     - JPYUSDT
     - USDUSDT
     - AUDUSDT
+    - BNBUSDT
     - DOWN
     - UP
 
@@ -80,9 +81,9 @@ trading_options:
   SELL_ON_SIGNAL_ONLY: True
 
   # Trading fee in % per trade.
-  # If using 0.75% (using BNB for fees) you must have BNB in your account to cover trading fees.
+  # If using 0.075% (using BNB for fees) you must have BNB in your account to cover trading fees.
   # If using BNB for fees, it MUST be enabled in your Binance 'Dashboard' page (checkbox).
-  TRADING_FEE: 0.75
+  TRADING_FEE: 0.075
 
   # Discord integration
   # Used to push alerts, messages etc to a discord channel
