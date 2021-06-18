@@ -79,6 +79,8 @@ session_tpsl_override_msg = ""
 is_bot_running = True
 
 global historic_profit_incfees_perc, historic_profit_incfees_total, trade_wins, trade_losses
+global sell_all_coins
+
 try:
     historic_profit_incfees_perc
 except NameError:
@@ -525,7 +527,7 @@ def buy():
 
 def sell_coins():
     '''sell coins that have reached the STOP LOSS or TAKE PROFIT threshold'''
-    global hsp_head, session_profit_incfees_perc, session_profit_incfees_total, coin_order_id, trade_wins, trade_losses, historic_profit_incfees_perc, historic_profit_incfees_total
+    global hsp_head, session_profit_incfees_perc, session_profit_incfees_total, coin_order_id, trade_wins, trade_losses, historic_profit_incfees_perc, historic_profit_incfees_total, sell_all_coins
     
     externals = sell_external_signals()
     
@@ -556,12 +558,12 @@ def sell_coins():
         SL = float(coins_bought[coin]['bought_at']) + ((float(coins_bought[coin]['bought_at']) * (coins_bought[coin]['stop_loss']) / 100))
 
         # check that the price is above the take profit and readjust SL and TP accordingly if trialing stop loss used
-        if LastPrice > TP and USE_TRAILING_STOP_LOSS:
-
+        
+        if LastPrice > TP and USE_TRAILING_STOP_LOSS and not sell_all_coins:
             # increasing TP by TRAILING_TAKE_PROFIT (essentially next time to readjust SL)
             coins_bought[coin]['stop_loss'] = coins_bought[coin]['take_profit'] - TRAILING_STOP_LOSS
             coins_bought[coin]['take_profit'] = PriceChange_Perc + TRAILING_TAKE_PROFIT
-			# if DEBUG: print(f"{coin} TP reached, adjusting TP {coins_bought[coin]['take_profit']:.2f}  and SL {coins_bought[coin]['stop_loss']:.2f} accordingly to lock-in profit")
+            # if DEBUG: print(f"{coin} TP reached, adjusting TP {coins_bought[coin]['take_profit']:.2f}  and SL {coins_bought[coin]['stop_loss']:.2f} accordingly to lock-in profit")
             if DEBUG: print(f"{coin} TP reached, adjusting TP {coins_bought[coin]['take_profit']:.{decimals()}f} and SL {coins_bought[coin]['stop_loss']:.{decimals()}f} accordingly to lock-in profit")
             continue
 
@@ -583,8 +585,11 @@ def sell_coins():
             if coin in externals:
                 sellCoin = True
                 sell_reason = 'External Sell Signal'
+        
+        if sell_all_coins:
+            sellCoin = True
+            sell_reason = 'Sell All Coins'
 
-        #if LastPrice < SL or LastPrice > TP and not USE_TRAILING_STOP_LOSS:
         if sellCoin:
             print(f"{txcolors.SELL_PROFIT if PriceChangeIncFees_Perc >= 0. else txcolors.SELL_LOSS}Sell: {coins_bought[coin]['volume']} of {coin} | {sell_reason} | ${float(LastPrice):g} - ${float(BuyPrice):g} | Profit: {PriceChangeIncFees_Perc:.2f}% Est: {(TRADE_TOTAL*PriceChangeIncFees_Perc)/100:.{decimals()}f} {PAIR_WITH} (Inc Fees){txcolors.DEFAULT}")
             
@@ -633,7 +638,9 @@ def sell_coins():
                     trade_losses += 1
 
                 update_bot_stats()
-                balance_report(last_price)
+                if not sell_all_coins:
+                    # within sell_all_coins, it will print display to screen
+                    balance_report(last_price)
 
             continue
 
@@ -744,15 +751,20 @@ def remove_external_signals(fileext):
             except:
                 if DEBUG: print(f'{txcolors.WARNING}Could not remove external signalling file {filename}{txcolors.DEFAULT}')
 
-def sell_all_coins(msgreason):
-    
+def sell_all(msgreason):
+    global sell_all_coins
+
     msg_discord(f'SELL ALL COINS: {msgreason}')
 
     # stop external signals so no buying/selling/pausing etc can occur
     stop_signal_threads()
 
-    #TODO sell all coins NOW!
-        
+    # sell all coins NOW!
+    sell_all_coins = True
+
+    coins_sold = sell_coins()
+    remove_from_portfolio(coins_sold)
+    
     # display final info to screen
     last_price = get_price()
     discordmsg = balance_report(last_price)
@@ -849,6 +861,8 @@ if __name__ == '__main__':
 
     if MSG_DISCORD:
         DISCORD_WEBHOOK = load_discord_creds(parsed_creds)
+
+    sell_all_coins = False
 
     # Authenticate with the client, Ensure API key is good before continuing
     if AMERICAN_USER:
@@ -968,7 +982,7 @@ if __name__ == '__main__':
             sellall = input(f'{txcolors.WARNING}Do you want to sell all coins (y/N)?{txcolors.DEFAULT}')
             if sellall.upper() == "Y":
                 # sell all coins
-                sell_all_coins('Program execution ended by user!')
+                sell_all('Program execution ended by user!')
             
             sys.exit(0)
 
@@ -978,7 +992,7 @@ if __name__ == '__main__':
             print(f'')
             print(f'{txcolors.WARNING}{session_tpsl_override_msg}{txcolors.DEFAULT}')
             
-            sell_all_coins(session_tpsl_override_msg)
+            sell_all(session_tpsl_override_msg)
             sys.exit(0)
 
         else:
