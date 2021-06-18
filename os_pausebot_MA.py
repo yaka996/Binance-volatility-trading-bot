@@ -48,15 +48,21 @@ def analyze():
 def do_work():
 
     while True:
-        if not threading.main_thread().is_alive(): exit()
-        # print(f'pausebotmod: Fetching market state')
-        paused = analyze()
-        if paused:
-            with open(SIGNAL_FILE,'a+') as f:
-                f.write('yes')
-        else:
-            if os.path.isfile(SIGNAL_FILE):
-                os.remove(SIGNAL_FILE)
+        try:
+            if not threading.main_thread().is_alive(): exit()
+            # print(f'pausebotmod: Fetching market state')
+            paused = analyze()
+            if paused:
+                with open(SIGNAL_FILE,'a+') as f:
+                    f.write('yes')
+            else:
+                if os.path.isfile(SIGNAL_FILE):
+                    os.remove(SIGNAL_FILE)
 
-        # print(f'pausebotmod: Waiting {TIME_TO_WAIT} minutes for next market checkup')
-        time.sleep((TIME_TO_WAIT*60))
+            # print(f'pausebotmod: Waiting {TIME_TO_WAIT} minutes for next market checkup')
+            time.sleep((TIME_TO_WAIT*60))
+        except Exception as e:
+            print(f'{SIGNAL_NAME}: Exception do_work() 1: {e}')
+            continue
+        except KeyboardInterrupt as ki:
+            continue

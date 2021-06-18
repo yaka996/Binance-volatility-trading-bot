@@ -187,3 +187,5 @@ def do_work():
         except Exception as e:
             print(f'{SIGNAL_NAME}: Exception do_work(): {e}')
             continue
+        except KeyboardInterrupt as ki:
+            continue

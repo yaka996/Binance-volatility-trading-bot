@@ -21,6 +21,7 @@ import sys
 
 # used to create threads & dynamic loading of modules
 import threading
+import multiprocessing
 import importlib
 
 # used for directory handling
@@ -345,7 +346,7 @@ def balance_report(last_price):
 
     msg_discord_balance(msg)
 
-    return
+    return msg
 
 def msg_discord_balance(msg):
     global last_msg_discord_balance_date
@@ -743,6 +744,29 @@ def remove_external_signals(fileext):
             except:
                 if DEBUG: print(f'{txcolors.WARNING}Could not remove external signalling file {filename}{txcolors.DEFAULT}')
 
+def sell_all_coins(msgreason):
+    
+    msg_discord(f'SELL ALL COINS: {msgreason}')
+
+    # stop external signals so no buying/selling/pausing etc can occur
+    stop_signal_threads()
+
+    #TODO sell all coins NOW!
+        
+    # display final info to screen
+    last_price = get_price()
+    discordmsg = balance_report(last_price)
+    msg_discord(discordmsg)
+
+def stop_signal_threads():
+
+    try:
+        for signalthread in signalthreads:
+            print(f'Terminating thread {str(signalthread.name)}')
+            signalthread.terminate()
+    except:
+        pass
+
 if __name__ == '__main__':
 
     # Load arguments then parse settings
@@ -882,7 +906,7 @@ if __name__ == '__main__':
         with open(coins_bought_file_path) as file:
                 coins_bought = json.load(file)
 
-    print('Press Ctrl-Q to stop the script')
+    print('Press Ctrl-C to stop the script')
 
     if not TEST_MODE:
         if not args.notimeout: # if notimeout skip this (fast for dev tests)
@@ -895,14 +919,21 @@ if __name__ == '__main__':
     remove_external_signals('pause')
 
     # load signalling modules
+    signalthreads = []
     try:
         if len(SIGNALLING_MODULES) > 0:
             for module in SIGNALLING_MODULES:
                 print(f'Starting {module}')
                 mymodule[module] = importlib.import_module(module)
-                t = threading.Thread(target=mymodule[module].do_work, args=())
+                # t = threading.Thread(target=mymodule[module].do_work, args=())
+                t = multiprocessing.Process(target=mymodule[module].do_work, args=())
+                t.name = module
                 t.daemon = True
                 t.start()
+
+                # add process to a list. This is so the thread can be terminated at a later time
+                signalthreads.append(t)
+
                 time.sleep(2)
         else:
             print(f'No modules to load {SIGNALLING_MODULES}')
@@ -927,18 +958,29 @@ if __name__ == '__main__':
         except ConnectionError as ce:
             READ_CONNECTERR_COUNT += 1
             print(f'We got a connection error from Binance. Re-loop. Connection Errors so far: {READ_CONNECTERR_COUNT}')
+        except KeyboardInterrupt as ki:
+            # stop external signal threads
+            stop_signal_threads()
+
+            # ask user if they want to sell all coins
+            print(f'\n\n\n')
+            print(f'{txcolors.WARNING}Program execution ended by user!{txcolors.DEFAULT}\n')
+            sellall = input(f'{txcolors.WARNING}Do you want to sell all coins (y/N)?{txcolors.DEFAULT}')
+            if sellall.upper() == "Y":
+                # sell all coins
+                sell_all_coins('Program execution ended by user!')
+            
+            sys.exit(0)
 
     if not is_bot_running:
         if SESSION_TPSL_OVERRIDE:
             print(f'')
             print(f'')
             print(f'{txcolors.WARNING}{session_tpsl_override_msg}{txcolors.DEFAULT}')
-            #TODO activate pause so no chance of buying coins
-            #TODO sell all coins NOW!
-            #TODO display outcome of the sale
             
-            last_price = get_price()
-            balance_report(last_price)
+            sell_all_coins(session_tpsl_override_msg)
+            sys.exit(0)
+
         else:
             print(f'')
             print(f'')

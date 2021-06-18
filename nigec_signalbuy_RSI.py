@@ -198,4 +198,6 @@ def do_work():
             time.sleep((TIME_TO_WAIT*60))
         except Exception as e:
             print(f'{SIGNAL_NAME}: Exception do_work() 1: {e}')
-            continue   
+            continue
+        except KeyboardInterrupt as ki:
+            continue
