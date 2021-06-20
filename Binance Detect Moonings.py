@@ -575,10 +575,10 @@ def sell_coins(tpsl_override = False):
         else:
             if LastPrice < SL: 
                 sellCoin = True
-                sell_reason = "TP " + str(TP) + "reached"
+                sell_reason = "TP " + str(TP) + " reached"
             if LastPrice > TP:
                 sellCoin = True
-                sell_reason = "SL " + str(SL) + "reached"
+                sell_reason = "SL " + str(SL) + " reached"
             if coin in externals:
                 sellCoin = True
                 sell_reason = 'External Sell Signal'
@@ -678,10 +678,10 @@ def check_total_session_profit(coins_bought, last_price):
     if DEBUG: print(f'Session Override SL Feature: ASPP={allsession_profits_perc} STP {SESSION_TAKE_PROFIT} SSL {SESSION_STOP_LOSS}')
     
     if allsession_profits_perc >= float(SESSION_TAKE_PROFIT): 
-        session_tpsl_override_msg = "Session TP Override target of " + str(SESSION_TAKE_PROFIT) + "% met. TODO Sell all coins now!"
+        session_tpsl_override_msg = "Session TP Override target of " + str(SESSION_TAKE_PROFIT) + "% met. Sell all coins now!"
         is_bot_running = False
     if allsession_profits_perc <= float(SESSION_STOP_LOSS):
-        session_tpsl_override_msg = "Session SL Override target of " + str(SESSION_STOP_LOSS) + "% met. TODO Sell all coins now!"
+        session_tpsl_override_msg = "Session SL Override target of " + str(SESSION_STOP_LOSS) + "% met. Sell all coins now!"
         is_bot_running = False   
 
 def update_portfolio(orders, last_price, volume):
