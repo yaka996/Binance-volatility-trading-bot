@@ -30,7 +30,7 @@ SCREENER = 'CRYPTO'
 PAIR_WITH = 'USDT'
 TICKERS = 'tickers.txt' #'signalsample.txt'
 
-TIME_TO_WAIT = 5 # Minutes to wait between analysis
+TIME_TO_WAIT = 1 # Minutes to wait between analysis
 DEBUG = False # List analysis result to console
 
 SIGNAL_NAME = 'os_signalbuys_3SMA'
@@ -82,19 +82,19 @@ def analyze(pairs):
                     f.write(pair.removesuffix(PAIR_WITH) + '\n')
             continue
         
-        SMA5_1MIN = round(analysis1MIN.indicators['SMA5'],2)
-        SMA10_1MIN = round(analysis1MIN.indicators['SMA10'],2)
-        SMA20_1MIN = round(analysis1MIN.indicators['SMA20'],2)
+        SMA5_1MIN = round(analysis1MIN.indicators['SMA5'],4)
+        SMA10_1MIN = round(analysis1MIN.indicators['SMA10'],4)
+        SMA20_1MIN = round(analysis1MIN.indicators['SMA20'],4)
 
-        SMA5_5MIN = round(analysis5MIN.indicators['SMA5'],2)
-        SMA10_5MIN = round(analysis5MIN.indicators['SMA10'],2)
-        SMA20_5MIN = round(analysis5MIN.indicators['SMA20'],2)
+        SMA5_5MIN = round(analysis5MIN.indicators['SMA5'],4)
+        SMA10_5MIN = round(analysis5MIN.indicators['SMA10'],4)
+        SMA20_5MIN = round(analysis5MIN.indicators['SMA20'],4)
         
         ACTION = 'NOTHING'
         
         # Buy condition on the 1 minute indicator
-        if (SMA5_1MIN > SMA10_1MIN) or (SMA5_1MIN > SMA20_1MIN):            
-            # SMA5 = green
+        if (SMA5_5MIN > SMA10_5MIN) and (SMA10_5MIN > SMA20_5MIN):            
+            # SMA5 = green/white
             # SMA10 = blue 
             # SMA20 = red
             ACTION = 'BUY'
@@ -148,5 +148,7 @@ def do_work():
 
             time.sleep((TIME_TO_WAIT*60))
         except Exception as e:
-            print(f'{SIGNAL_NAME}: Exception do_work(): {e}')
+            print(f'{SIGNAL_NAME}: Exception do_work() 1: {e}')
+            continue
+        except KeyboardInterrupt as ki:
             continue
