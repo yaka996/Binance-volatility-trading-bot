@@ -68,13 +68,11 @@ trading_options:
 
   # Following are used to override SL, TP, TSL & TTP & SELL_ON_SIGNAL_ONLY in the case of a market crash
   # when hit SESSION_TAKE_PROFIT %, sell all coins and stop bot
-  # when hit SESSION_STOP_LOSS %, sell all coins and stop bot. Note, this needs to be a negative number i.e. -2
+  # when hit SESSION_STOP_LOSS %, sell all coins and stop bot.
+  # Note, SESSION_STOP_LOSS needs to be a NEGATIVE number i.e. -2
   SESSION_TPSL_OVERRIDE: False
   SESSION_TAKE_PROFIT: 5
   SESSION_STOP_LOSS: -2
-
-# Pausebotmod variables
-  PAUSEBOTMOD_THRESHOLD: 13
 
   # Let a signalling module control sell of coin
   # NOTE - If USE_TRAILING_STOP_LOSS: True then this needs to be False
