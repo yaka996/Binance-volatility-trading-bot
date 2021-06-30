@@ -105,8 +105,7 @@ def analyze(pairs):
 
         if ACTION == 'BUY':
             signal_coins[pair] = pair
-            if DEBUG:
-                print(f'{txcolors.BUY}{SIGNAL_NAME}: {pair} - Buy Signal Detected{txcolors.DEFAULT}')
+            print(f'{txcolors.BUY}{SIGNAL_NAME}: {pair} - Buy Signal Detected{txcolors.DEFAULT}')
             
             with open(SIGNAL_FILE_BUY,'a+') as f:
                 f.write(pair + '\n')

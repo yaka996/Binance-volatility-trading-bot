@@ -113,8 +113,9 @@ def analyze(pairs):
         print(f'{SIGNAL_NAME} Signals {pair} {ACTION} - SMA20_5MIN: {SMA20_5MIN} SMA10_5MIN: {SMA10_5MIN} SMA5_5MIN: {SMA5_5MIN}')
       
         if ACTION == 'SELL':
-            if DEBUG:
-                print(f'{txcolors.WARNING}{SIGNAL_NAME}: {pair} - Sell Signal Detected{txcolors.DEFAULT}')
+            
+            print(f'{txcolors.WARNING}{SIGNAL_NAME}: {pair} - Sell Signal Detected{txcolors.DEFAULT}')
+
             with open(SIGNAL_FILE_SELL,'a+') as f:
                 f.write(pair + '\n')
 
