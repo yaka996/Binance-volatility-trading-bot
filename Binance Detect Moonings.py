@@ -435,7 +435,7 @@ def convert_volume():
             info = client.get_symbol_info(coin)
             step_size = info['filters'][2]['stepSize']
             lot_size[coin] = step_size.index('1') - 1
-
+            
             if lot_size[coin] < 0:
                 lot_size[coin] = 0
 
@@ -447,8 +447,8 @@ def convert_volume():
 
         # define the volume with the correct step size
         if coin not in lot_size:
-            volume[coin] = float('{:.1f}'.format(volume[coin]))
-
+            # original code: volume[coin] = float('{:.1f}'.format(volume[coin]))
+            volume[coin] = int(volume[coin])
         else:
             # if lot size has 0 decimal points, make the volume an integer
             if lot_size[coin] == 0:
@@ -499,7 +499,7 @@ def buy():
 
         # error handling here in case position cannot be placed
             except Exception as e:
-                print(e)
+                print(f'buy() exception: {e}')
 
         # run the else block if the position has been placed and return order info
             else:
@@ -704,7 +704,7 @@ def update_portfolio(orders, last_price, volume):
         with open(coins_bought_file_path, 'w') as file:
             json.dump(coins_bought, file, indent=4)
 
-        print(f'Order for {orders[coin][0]["symbol"]} with ID {orders[coin][0]["orderId"]} placed and saved to file.')
+        print(f"Order for {orders[coin][0]['symbol']} with ID {orders[coin][0]['orderId']} placed and saved to file.")
 
 
 def update_bot_stats():
