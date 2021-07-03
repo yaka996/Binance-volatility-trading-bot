@@ -99,9 +99,9 @@ def analyze(pairs):
             # SMA100 = red
             ACTION = 'BUY'
 
-        # if DEBUG:
-        print(f'{SIGNAL_NAME} Signals {pair} {ACTION} - SMA100_5MIN: {SMA100_5MIN} SMA50_5MIN: {SMA50_5MIN} SMA20_5MIN: {SMA20_5MIN}')
-        print(f'{SIGNAL_NAME} Signals {pair} {ACTION} - SMA100_15MIN: {SMA100_15MIN} SMA50_15MIN: {SMA50_15MIN} SMA20_15MIN: {SMA20_15MIN}')
+        if DEBUG:
+            print(f'{SIGNAL_NAME} Signals {pair} {ACTION} - SMA100_5MIN: {SMA100_5MIN} SMA50_5MIN: {SMA50_5MIN} SMA20_5MIN: {SMA20_5MIN}')
+            print(f'{SIGNAL_NAME} Signals {pair} {ACTION} - SMA100_15MIN: {SMA100_15MIN} SMA50_15MIN: {SMA50_15MIN} SMA20_15MIN: {SMA20_15MIN}')
 
         if ACTION == 'BUY':
             signal_coins[pair] = pair
