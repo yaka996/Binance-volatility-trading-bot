@@ -80,7 +80,7 @@ session_tpsl_override_msg = ""
 is_bot_running = True
 
 global historic_profit_incfees_perc, historic_profit_incfees_total, trade_wins, trade_losses
-global sell_all_coins
+global sell_all_coins, bot_started_datetime
 
 try:
     historic_profit_incfees_perc
@@ -99,6 +99,7 @@ try:
 except NameError:
     trade_losses = 0      # or some other default value.
 
+bot_started_datetime = ""
 
 # print with timestamps
 old_out = sys.stdout
@@ -325,7 +326,7 @@ def balance_report(last_price):
     
     print(f'')
     print(f'--------')
-    print(f'STARTED         : {DATETIMESTARTED} | Running for: {datetime.now() - DATETIMESTARTED}')
+    print(f'STARTED         : {bot_started_datetime} | Running for: {datetime.now() - bot_started_datetime}')
     print(f'CURRENT HOLDS   : {len(coins_bought)}/{TRADE_SLOTS} ({float(CURRENT_EXPOSURE):g}/{float(INVESTMENT_TOTAL):g} {PAIR_WITH})')
     print(f'Buying Paused   : {bot_paused}')
     print(f'')
@@ -341,7 +342,7 @@ def balance_report(last_price):
     print(f'--------')
     print(f'')
     
-    msg = str(DATETIMESTARTED) + " | " + str(datetime.now() - DATETIMESTARTED) + " | " + str(len(coins_bought)) + "/" + str(TRADE_SLOTS) + " | PBOT: " + str(bot_paused)
+    msg = str(bot_started_datetime) + " | " + str(datetime.now() - bot_started_datetime) + " | " + str(len(coins_bought)) + "/" + str(TRADE_SLOTS) + " | PBOT: " + str(bot_paused)
     msg = msg + ' SPR%: ' + str(round(session_profit_incfees_perc,2)) + ' SPR$: ' + str(round(session_profit_incfees_total,4))
     msg = msg + ' SPU%: ' + str(round(unrealised_session_profit_incfees_perc,2)) + ' SPU$: ' + str(round(unrealised_session_profit_incfees_total,4))
     msg = msg + ' SPT%: ' + str(round(session_profit_incfees_perc + unrealised_session_profit_incfees_perc,2)) + ' SPT$: ' + str(round(session_profit_incfees_total+unrealised_session_profit_incfees_total,4))
@@ -491,7 +492,7 @@ def buy():
 
         # try to create a real order if the test orders did not raise an exception
             try:
-                buy_limit = client.create_order(
+                order_details = client.create_order(
                     symbol = coin,
                     side = 'BUY',
                     type = 'MARKET',
@@ -517,10 +518,12 @@ def buy():
                 else:
                     print('Order returned, saving order to file')
 
-                # Log trade
-                    #if LOG_TRADES:
-                    #write_log(f"Buy : {volume[coin]} {coin} - {last_price[coin]['price']}")
-                    write_log(f"\tBuy\t{coin}\t{volume[coin]}\t{last_price[coin]['price']}\t{PAIR_WITH}")
+                    if not TEST_MODE:
+                        orders[coin] = extract_order_data(order_details)
+                        write_log(f"\tBuy\t{coin}\t{orders[coin]['volume']}\t{orders[coin]['avgPrice']}\t{PAIR_WITH}")
+                    else:
+                        write_log(f"\tBuy\t{coin}\t{volume[coin]}\t{last_price[coin]['price']}\t{PAIR_WITH}")
+                    
                     write_signallsell(coin)
 
         else:
@@ -652,7 +655,6 @@ def sell_coins(tpsl_override = False):
                 historic_profit_incfees_total = historic_profit_incfees_total + profit_incfees_total
                 historic_profit_incfees_perc = historic_profit_incfees_perc + ((profit_incfees_total/BUDGET) * 100)
                 
-
                 #TRADE_TOTAL*PriceChangeIncFees_Perc)/100
                 
                 if (LastPrice+sellFee) >= (BuyPrice+buyFee):
@@ -665,6 +667,10 @@ def sell_coins(tpsl_override = False):
                     # within sell_all_coins, it will print display to screen
                     balance_report(last_price)
 
+            # sometimes get "rate limited" errors from Binance if we try to sell too many coins at once
+            # so wait 1 second in between sells
+            time.sleep(1)
+            
             continue
 
         # no action; print once every TIME_DIFFERENCE
@@ -764,28 +770,45 @@ def update_portfolio(orders, last_price, volume):
                         filter(lambda f: f['filterType'] == 'LOT_SIZE', client.get_symbol_info(orders[coin][0]['symbol'])['filters'])
                         )['stepSize'])
 
-        coins_bought[coin] = {
-            'symbol': orders[coin][0]['symbol'],
-            'orderid': orders[coin][0]['orderId'],
-            'timestamp': orders[coin][0]['time'],
-            'bought_at': last_price[coin]['price'],
-            'volume': volume[coin],
-            'stop_loss': -STOP_LOSS,
-            'take_profit': TAKE_PROFIT,
-            'step_size': coin_step_size,
-            }
+
+        if not TEST_MODE:
+            coins_bought[coin] = {
+               'symbol': orders[coin]['symbol'],
+               'orderid': orders[coin]['orderId'],
+               'timestamp': orders[coin]['timestamp'],
+               'bought_at': orders[coin]['avgPrice'],
+               'volume': orders[coin]['volume'],
+               'buyFeeBNB': orders[coin]['tradeFeeBNB'],
+               'buyFee': orders[coin]['tradeFeeUnit'] * orders[coin]['volume'],
+               'stop_loss': -STOP_LOSS,
+               'take_profit': TAKE_PROFIT,
+               'step_size': coin_step_size,
+               }
+
+            print(f'Order for {orders[coin]["symbol"]} with ID {orders[coin]["orderId"]} placed and saved to file.')
+        else:
+            coins_bought[coin] = {
+                'symbol': orders[coin][0]['symbol'],
+                'orderid': orders[coin][0]['orderId'],
+                'timestamp': orders[coin][0]['time'],
+                'bought_at': last_price[coin]['price'],
+                'volume': volume[coin],
+                'stop_loss': -STOP_LOSS,
+                'take_profit': TAKE_PROFIT,
+                'step_size': coin_step_size,
+                }
+
+            print(f'Order for {orders[coin][0]["symbol"]} with ID {orders[coin][0]["orderId"]} placed and saved to file.')
 
         # save the coins in a json file in the same directory
         with open(coins_bought_file_path, 'w') as file:
             json.dump(coins_bought, file, indent=4)
 
-        print(f"Order for {orders[coin][0]['symbol']} with ID {orders[coin][0]['orderId']} placed and saved to file.")
-
-
 def update_bot_stats():
     global trade_wins, trade_losses, historic_profit_incfees_perc, historic_profit_incfees_total
 
     bot_stats = {
+        'botstart_datetime' : str(bot_started_datetime),
         'historicProfitIncFees_Percent': historic_profit_incfees_perc,
         'historicProfitIncFees_Total': historic_profit_incfees_total,
         'tradeWins': trade_wins,
@@ -867,7 +890,6 @@ if __name__ == '__main__':
     args = parse_args()
     mymodule = {}
 
-    DATETIMESTARTED = datetime.now()
     last_msg_discord_balance_date = datetime.now()
 
     # set to false at Start
@@ -979,12 +1001,17 @@ if __name__ == '__main__':
     # use separate files for testing and live trading
     LOG_FILE = file_prefix + LOG_FILE
 
-    #     
+    bot_started_datetime = datetime.now()
 
     if os.path.isfile(bot_stats_file_path) and os.stat(bot_stats_file_path).st_size!= 0:
         with open(bot_stats_file_path) as file:
             bot_stats = json.load(file)
             # load bot stats:
+            try:
+                bot_started_datetime = datetime.strptime(bot_stats['botstart_datetime'], '%Y-%m-%d %H:%M:%S.%f')
+            except Exception as e:
+                print (f'Exception on reading botstart_datetime from {bot_stats_file_path}. Exception: {e}')   
+            
             historic_profit_incfees_perc = bot_stats['historicProfitIncFees_Percent']
             historic_profit_incfees_total = bot_stats['historicProfitIncFees_Total']
             trade_wins = bot_stats['tradeWins']
