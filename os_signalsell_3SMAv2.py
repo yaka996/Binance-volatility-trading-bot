@@ -148,13 +148,11 @@ def do_work():
             if not threading.main_thread().is_alive(): exit()
             print(f'{SIGNAL_NAME}: Analyzing {len(pairs)} coins')
             signal_coins = analyze(pairs)
-            #if len(signal_coins) == 0:
-            #    print(f'{SIGNAL_NAME}: No coins above sell threshold on three timeframes. Waiting {TIME_TO_WAIT} minutes for next analysis')
-            #else:
-            #    print(f'{SIGNAL_NAME}: {len(signal_coins)} coins with Buy signals. Waiting {TIME_TO_WAIT} minutes for next analysis')
             print(f'{SIGNAL_NAME}: {len(signal_coins)} coins with Sell Signals. Waiting {TIME_TO_WAIT} minutes for next analysis.')
 
             time.sleep((TIME_TO_WAIT*60))
         except Exception as e:
             print(f'{SIGNAL_NAME}: Exception: {e}')
+            continue
+        except KeyboardInterrupt as ki:
             continue

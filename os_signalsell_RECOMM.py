@@ -110,26 +110,27 @@ def analyze(pairs):
     return signal_coins
 
 def do_work():
-    try:
-        while True:
-            if not os.path.exists(TICKERS):
+    while True:
+        try:
+            if not os.path.exists(SELL_TICKERS):
                 time.sleep((TIME_TO_WAIT*60))
                 continue
 
             signal_coins = {}
             pairs = {}
 
-            pairs=[line.strip() for line in open(TICKERS)]
-            for line in open(TICKERS):
-                pairs=[line.strip() + PAIR_WITH for line in open(TICKERS)] 
+            pairs=[line.strip() for line in open(SELL_TICKERS)]
+            for line in open(SELL_TICKERS):
+                pairs=[line.strip() + PAIR_WITH for line in open(SELL_TICKERS)] 
             
+            if not threading.main_thread().is_alive(): exit()
             print(f'{SIGNAL_NAME}: Analyzing {len(pairs)} coins')
             signal_coins = analyze(pairs)
-            if len(signal_coins) == 0:
-                print(f'{SIGNAL_NAME}: No coins above sell threshold on three timeframes. Waiting {TIME_TO_WAIT} minutes for next analysis')
-            else:
-                print(f'{SIGNAL_NAME}: {len(signal_coins)} coins above sell treshold on three timeframes. Waiting {TIME_TO_WAIT} minutes for next analysis')
+            print(f'{SIGNAL_NAME}: {len(signal_coins)} coins with Sell Signals. Waiting {TIME_TO_WAIT} minutes for next analysis.')
 
             time.sleep((TIME_TO_WAIT*60))
-    except Exception as e:
+        except Exception as e:
             print(f'{SIGNAL_NAME}: Exception: {e}')
+            continue
+        except KeyboardInterrupt as ki:
+            continue
