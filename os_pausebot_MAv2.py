@@ -87,26 +87,3 @@ def do_work():
             continue
         except KeyboardInterrupt as ki:
             continue
-
-def price_downward_trend():
-    if len(prices) > 3:
-        # remove the 4th item in the list
-        # we only want to tracke the last 3 prices 
-        prices.pop(3)
-
-    lastprice = 0
-    ret = False
-    for price in prices:
-        print(f'price_downward_trend: Price: {price} | LastPrice: {lastprice}')
-        if price < lastprice:
-            ret = True
-        else:
-            ret = False
-        
-        print(f'price_downward_trend: ret: {ret}')
-        lastprice = price
-
-
-    return ret
-        
-    
