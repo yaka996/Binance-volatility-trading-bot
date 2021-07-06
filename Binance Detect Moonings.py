@@ -327,6 +327,7 @@ def balance_report(last_price):
     print(f'--------')
     print(f'STARTED         : {DATETIMESTARTED} | Running for: {datetime.now() - DATETIMESTARTED}')
     print(f'CURRENT HOLDS   : {len(coins_bought)}/{TRADE_SLOTS} ({float(CURRENT_EXPOSURE):g}/{float(INVESTMENT_TOTAL):g} {PAIR_WITH})')
+    print(f'Buying Paused   : {bot_paused}')
     print(f'')
     print(f'SESSION PROFIT (Inc Fees)')
     print(f'Realised        : {txcolors.SELL_PROFIT if session_profit_incfees_perc > 0. else txcolors.SELL_LOSS}{session_profit_incfees_perc:.4f}% Est:${session_profit_incfees_total:.4f} {PAIR_WITH}{txcolors.DEFAULT}')
@@ -340,7 +341,7 @@ def balance_report(last_price):
     print(f'--------')
     print(f'')
     
-    msg = str(DATETIMESTARTED) + " | " + str(datetime.now() - DATETIMESTARTED) + " | " + str(len(coins_bought)) + "/" + str(TRADE_SLOTS)
+    msg = str(DATETIMESTARTED) + " | " + str(datetime.now() - DATETIMESTARTED) + " | " + str(len(coins_bought)) + "/" + str(TRADE_SLOTS) + " | PBOT: " + str(bot_paused)
     msg = msg + ' SPR%: ' + str(round(session_profit_incfees_perc,2)) + ' SPR$: ' + str(round(session_profit_incfees_total,4))
     msg = msg + ' SPU%: ' + str(round(unrealised_session_profit_incfees_perc,2)) + ' SPU$: ' + str(round(unrealised_session_profit_incfees_total,4))
     msg = msg + ' SPT%: ' + str(round(session_profit_incfees_perc + unrealised_session_profit_incfees_perc,2)) + ' SPT$: ' + str(round(session_profit_incfees_total+unrealised_session_profit_incfees_total,4))
