@@ -37,6 +37,7 @@ init()
 # needed for the binance API / websockets / Exception handling
 from binance.client import Client
 from binance.exceptions import BinanceAPIException
+from binance.helpers import round_step_size
 from requests.exceptions import ReadTimeout, ConnectionError
 
 # used for dates
@@ -481,7 +482,7 @@ def buy():
 
            		# Log trade
                 #if LOG_TRADES:
-                write_log(f"Buy : {volume[coin]} {coin} - {last_price[coin]['price']}")
+                write_log(f"\tBuy\t{coin}\t{volume[coin]}\t{last_price[coin]['price']}\t{PAIR_WITH}")
                 
                 write_signallsell(coin.removesuffix(PAIR_WITH))
 
@@ -517,7 +518,8 @@ def buy():
 
                 # Log trade
                     #if LOG_TRADES:
-                    write_log(f"Buy : {volume[coin]} {coin} - {last_price[coin]['price']}")
+                    #write_log(f"Buy : {volume[coin]} {coin} - {last_price[coin]['price']}")
+                    write_log(f"\tBuy\t{coin}\t{volume[coin]}\t{last_price[coin]['price']}\t{PAIR_WITH}")
                     write_signallsell(coin)
 
         else:
@@ -598,12 +600,21 @@ def sell_coins(tpsl_override = False):
 
             # try to create a real order
             try:
+                rounded_amount = round_step_size(coins_bought[coin]['volume'], coins_bought[coin]['step_size'])
+            except Exception:
+                tick_size = float(next(
+                    filter(lambda f: f['filterType'] == 'LOT_SIZE', client.get_symbol_info(coin)['filters'])
+                )['stepSize'])
+                rounded_amount = round_step_size(coins_bought[coin]['volume'], tick_size)
+
+            try:
                 if not TEST_MODE:
                     sell_coins_limit = client.create_order(
                         symbol = coin,
                         side = 'SELL',
                         type = 'MARKET',
-                        quantity = coins_bought[coin]['volume']
+                        #quantity = coins_bought[coin]['volume']
+                        quantity = rounded_amount
                     )
 
             # error handling here in case position cannot be placed
@@ -620,7 +631,8 @@ def sell_coins(tpsl_override = False):
                 # Log trade
                 #BB profit = ((LastPrice - BuyPrice) * coins_sold[coin]['volume']) * (1-(buyFee + sellFeeTotal))
                 profit_incfees_total = coins_sold[coin]['volume'] * PriceChangeIncFees_Unit
-                write_log(f"Sell: {coins_sold[coin]['volume']} {coin} - {BuyPrice} - {LastPrice} Profit: {profit_incfees_total:.{decimals()}f} {PAIR_WITH} ({PriceChange_Perc:.2f}%)")
+                #write_log(f"Sell: {coins_sold[coin]['volume']} {coin} - {BuyPrice} - {LastPrice} Profit: {profit_incfees_total:.{decimals()}f} {PAIR_WITH} ({PriceChange_Perc:.2f}%)")
+                write_log(f"\tSell\t{coin}\t{coins_sold[coin]['volume']}\t{BuyPrice}\t{PAIR_WITH}\t{LastPrice}\t{profit_incfees_total:.{decimals()}f}\t{PriceChange_Perc:.2f}")
                 
                 #this is good
                 session_profit_incfees_total = session_profit_incfees_total + profit_incfees_total
@@ -689,6 +701,9 @@ def update_portfolio(orders, last_price, volume):
 
     #     print(orders)
     for coin in orders:
+        coin_step_size = float(next(
+                        filter(lambda f: f['filterType'] == 'LOT_SIZE', client.get_symbol_info(orders[coin][0]['symbol'])['filters'])
+                        )['stepSize'])
 
         coins_bought[coin] = {
             'symbol': orders[coin][0]['symbol'],
@@ -698,6 +713,7 @@ def update_portfolio(orders, last_price, volume):
             'volume': volume[coin],
             'stop_loss': -STOP_LOSS,
             'take_profit': TAKE_PROFIT,
+            'step_size': coin_step_size,
             }
 
         # save the coins in a json file in the same directory
@@ -737,6 +753,11 @@ def remove_from_portfolio(coins_sold):
 
 def write_log(logline):
     timestamp = datetime.now().strftime("%d/%m %H:%M:%S")
+
+    if not os.path.exists(LOG_FILE):
+        with open(LOG_FILE,'a+') as f:
+            f.write('Datetime\tType\tCoin\tVolume\tBuy Price\tCurrency\tSell Price\tProfit $\tProfit %\n')    
+
     with open(LOG_FILE,'a+') as f:
         f.write(timestamp + ' ' + logline + '\n')
 
