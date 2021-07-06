@@ -610,7 +610,7 @@ def sell_coins(tpsl_override = False):
 
             try:
                 if not TEST_MODE:
-                    sell_coins_limit = client.create_order(
+                    order_details = client.create_order(
                         symbol = coin,
                         side = 'SELL',
                         type = 'MARKET',
@@ -624,7 +624,17 @@ def sell_coins(tpsl_override = False):
 
             # run the else block if coin has been sold and create a dict for each coin sold
             else:
-                coins_sold[coin] = coins_bought[coin]
+                if not TEST_MODE:
+                    coins_sold[coin] = extract_order_data(order_details)
+                    lastPrice = coins_sold[coin]['avgPrice']
+                    sellFee = coins_sold[coin]['tradeFeeUnit']
+                    coins_sold[coin]['orderid'] = coins_bought[coin]['orderid']
+                    priceChange = float((lastPrice - buyPrice) / buyPrice * 100)
+
+                    # update this from the actual Binance sale information
+                    PriceChangeIncFees_Unit = float((lastPrice+sellFee) - (BuyPrice+buyFee))
+                else:
+                    coins_sold[coin] = coins_bought[coin]
 
                 # prevent system from buying this coin for the next TIME_DIFFERENCE minutes
                 volatility_cooloff[coin] = datetime.now()
@@ -668,6 +678,54 @@ def sell_coins(tpsl_override = False):
 
     return coins_sold
 
+def extract_order_data(order_details):
+    global TRADING_FEE, STOP_LOSS, TAKE_PROFIT
+    transactionInfo = {}
+    # This code is from GoranJovic - thank you!
+    #
+    # adding order fill extractions here
+    #
+    # just to explain what I am doing here:
+    # Market orders are not always filled at one price, we need to find the averages of all 'parts' (fills) of this order.
+    #
+    # reset other variables to 0 before use
+    FILLS_TOTAL = 0
+    FILLS_QTY = 0
+    FILLS_FEE = 0
+    BNB_WARNING = 0
+    # loop through each 'fill':
+    for fills in order_details['fills']:
+        FILL_PRICE = float(fills['price'])
+        FILL_QTY = float(fills['qty'])
+        FILLS_FEE += float(fills['commission'])
+        # check if the fee was in BNB. If not, log a nice warning:
+        if (fills['commissionAsset'] != 'BNB') and (TRADING_FEE == 0.075) and (BNB_WARNING == 0):
+            print(f"WARNING: BNB not used for trading fee, please ")
+            BNB_WARNING += 1
+        # quantity of fills * price
+        FILLS_TOTAL += (FILL_PRICE * FILL_QTY)
+        # add to running total of fills quantity
+        FILLS_QTY += FILL_QTY
+        # increase fills array index by 1
+
+    # calculate average fill price:
+    FILL_AVG = (FILLS_TOTAL / FILLS_QTY)
+
+    #tradeFeeApprox = (float(FILLS_QTY) * float(FILL_AVG)) * (TRADING_FEE/100)
+    # Olorin Sledge: I only want fee at the unit level, not the total level
+    tradeFeeApprox = float(FILL_AVG) * (TRADING_FEE/100)
+
+    # create object with received data from Binance
+    transactionInfo = {
+        'symbol': order_details['symbol'],
+        'orderId': order_details['orderId'],
+        'timestamp': order_details['transactTime'],
+        'avgPrice': float(FILL_AVG),
+        'volume': float(FILLS_QTY),
+        'tradeFeeBNB': float(FILLS_FEE),
+        'tradeFeeUnit': tradeFeeApprox,
+    }
+    return transactionInfo
 
 def check_total_session_profit(coins_bought, last_price):
     global is_bot_running, session_tpsl_override_msg
