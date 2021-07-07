@@ -59,7 +59,7 @@ SCREENER = 'CRYPTO'
 PAIR_WITH = 'USDT'
 TICKERS = 'tickers.txt' #'signalsample.txt'
 TIME_TO_WAIT = 2 # Minutes to wait between analysis
-FULL_LOG = True # List analysis result to console
+FULL_LOG = False # List analysis result to console
 
 SIGNAL_NAME = 'nigec_signalbuy_RSI'
 SIGNAL_FILE_BUY = 'signals/' + SIGNAL_NAME + '.buy'
