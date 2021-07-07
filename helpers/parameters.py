@@ -20,4 +20,5 @@ def parse_args():
     x.add_argument('--config', '-c', help="Path to config.yml")
     x.add_argument('--creds', '-u', help="Path to creds file")
     x.add_argument('--notimeout', help="Dont use timeout in prod", action="store_true")
+    x.add_argument('--test', '-t', help="Test mode")
     return x.parse_args()

@@ -15,6 +15,8 @@ def load_correct_creds(creds):
         message += f'Exception:\n\t{str(e)}'
         exit(message)
         
+def load_discord_creds(creds):
+    return creds['discord']['DISCORD_WEBHOOK']
 
 def test_api_key(client, BinanceAPIException):
     """Checks to see if API keys supplied returns errors
