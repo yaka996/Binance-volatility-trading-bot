@@ -88,12 +88,12 @@ trading_options:
   MSG_DISCORD: False
   
   SIGNALLING_MODULES:
-    # NOTE: Only use the "os_xxxxxxxxx" signal/pause modules with this fork as 
+    # NOTE: Only use the "os_xxxxxxxxx" or "nigec_xxxxxxxxx" etc signal/pause modules with this fork as 
     # the default ones WILL NOT work due to customisations for my specific purposes
     #
     # - os_signalbuy_RECOMM
     # - os_signalsell_RECOMM
-    - os_signalbuysell_RSI
-    - os_pausebot_MA
+    - os_signalbuy_3SMAv2
+    - os_pausebot_MAv2
     
   
