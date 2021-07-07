@@ -606,11 +606,13 @@ def sell_coins(tpsl_override = False):
             try:
                 rounded_amount = round_step_size(coins_bought[coin]['volume'], coins_bought[coin]['step_size'])
             except Exception:
-                tick_size = float(next(
-                    filter(lambda f: f['filterType'] == 'LOT_SIZE', client.get_symbol_info(coin)['filters'])
-                )['stepSize'])
-                rounded_amount = round_step_size(coins_bought[coin]['volume'], tick_size)
-
+                try:
+                    tick_size = float(next(
+                        filter(lambda f: f['filterType'] == 'LOT_SIZE', client.get_symbol_info(coin)['filters'])
+                    )['stepSize'])
+                    rounded_amount = round_step_size(coins_bought[coin]['volume'], tick_size)
+                except Exception:
+                    rounded_amount = coins_bought[coin]['volume']
             try:
                 if not TEST_MODE:
                     order_details = client.create_order(
@@ -766,9 +768,12 @@ def update_portfolio(orders, last_price, volume):
 
     #     print(orders)
     for coin in orders:
-        coin_step_size = float(next(
+        try:
+            coin_step_size = float(next(
                         filter(lambda f: f['filterType'] == 'LOT_SIZE', client.get_symbol_info(orders[coin][0]['symbol'])['filters'])
                         )['stepSize'])
+        except Exception as ExStepSize:
+            coin_step_size = .1
 
 
         if not TEST_MODE:
@@ -782,7 +787,7 @@ def update_portfolio(orders, last_price, volume):
                'buyFee': orders[coin]['tradeFeeUnit'] * orders[coin]['volume'],
                'stop_loss': -STOP_LOSS,
                'take_profit': TAKE_PROFIT,
-               'step_size': coin_step_size,
+               'step_size': float(coin_step_size),
                }
 
             print(f'Order for {orders[coin]["symbol"]} with ID {orders[coin]["orderId"]} placed and saved to file.')
@@ -795,7 +800,7 @@ def update_portfolio(orders, last_price, volume):
                 'volume': volume[coin],
                 'stop_loss': -STOP_LOSS,
                 'take_profit': TAKE_PROFIT,
-                'step_size': coin_step_size,
+                'step_size': float(coin_step_size),
                 }
 
             print(f'Order for {orders[coin][0]["symbol"]} with ID {orders[coin][0]["orderId"]} placed and saved to file.')
