@@ -152,7 +152,10 @@ def analyze(pairs):
           
         if SELL_COINS:
             if (BUY_SIGS < SIGNALS_SELL) and (BUY_SIGS2 < SIGNALS_SELL) and (STOCH_DIFF < STOCH_SELL) and (RSI_DIFF < RSI_SELL) and (STOCH_K < STOCH_K1):
+                
                 print(f'\033[33mSignals RSI: {pair} - Sell Signal Detected | {BUY_SIGS}_{BUY_SIGS2}/26')
+                
+                signal_coins[pair] = pair
                 
                 with open(SIGNAL_FILE_SELL,'a+') as f:
                     f.write(pair + '\n')

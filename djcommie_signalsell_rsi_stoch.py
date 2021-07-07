@@ -125,6 +125,7 @@ def analyze(pairs):
             action = RSI_BB_dispersion(RSI_list[::-1], NUM_CANDLES, RSI)
 
         if action == 'SELL':
+            signal_coins[pair] = pair
             print(f'{txcolors.SELL}{SIGNAL_NAME}: {pair} - Sell Signal Detected{txcolors.DEFAULT}')
 
             with open(SIGNAL_FILE_SELL,'a+') as f:
