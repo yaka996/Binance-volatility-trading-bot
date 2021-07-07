@@ -39,9 +39,13 @@ creds_file = args.creds if args.creds else DEFAULT_CREDS_FILE
 parsed_creds = load_config(creds_file)
 parsed_config = load_config(config_file)
 
+prefix = 'live_'
+if args.test:
+    prefix = 'test_'
+
 LOG_TRADES = parsed_config['script_options'].get('LOG_TRADES')
 LOG_FILE = parsed_config['script_options'].get('LOG_FILE')
-LOG_FILE_PATH = '../' + LOG_FILE
+LOG_FILE_PATH = '../' + prefix + LOG_FILE
 
 access_key, secret_key = load_correct_creds(parsed_creds)
 
@@ -52,21 +56,27 @@ def write_log(logline):
     with open(LOG_FILE_PATH,'a+') as f:
         f.write(timestamp + ' ' + logline + '\n')
 
-with open('../coins_bought.json', 'r') as f:
+with open('../' + prefix + 'coins_bought.json', 'r') as f:
     coins = json.load(f)
     total_profit = 0
     total_price_change = 0
 
     for coin in list(coins):
-        sell_coin = client.create_order(
-            symbol = coin,
-            side = 'SELL',
-            type = 'MARKET',
-            quantity = coins[coin]['volume']
-        )
+        if not args.test: 
+            sell_coin = client.create_order(
+                symbol = coin,
+                side = 'SELL',
+                type = 'MARKET',
+                quantity = coins[coin]['volume']
+            )
 
         BuyPrice = float(coins[coin]['bought_at'])
-        LastPrice = float(sell_coin['fills'][0]['price'])
+        if not args.test:
+            LastPrice = float(sell_coin['fills'][0]['price'])
+        else: 
+            # simulate sale price
+            LastPrice = BuyPrice *1.1
+            
         profit = (LastPrice - BuyPrice) * coins[coin]['volume']
         PriceChange = float((LastPrice - BuyPrice) / BuyPrice * 100)
 
@@ -84,4 +94,4 @@ with open('../coins_bought.json', 'r') as f:
     text_color = txcolors.SELL_PROFIT if total_price_change >= 0. else txcolors.SELL_LOSS
     print(f"Total Profit: {text_color}{total_profit:.2f}{txcolors.DEFAULT}. Total Price Change: {text_color}{total_price_change:.2f}%{txcolors.DEFAULT}")
 
-os.remove('../coins_bought.json')
+os.remove('../' + prefix + 'coins_bought.json')
