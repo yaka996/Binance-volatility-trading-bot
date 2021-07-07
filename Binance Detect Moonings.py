@@ -10,6 +10,9 @@ or as a guarantee of any specific outcome or profit.
 By using this program you accept all liabilities,
 and that no claims can be made against the developers,
 or others connected with the program.
+
+See requirements.txt for versions of modules needed
+Requires Python version 3.9.x to run
 """
 
 
@@ -297,6 +300,7 @@ def balance_report(last_price):
     unrealised_session_profit_incfees_total = 0
 
     BUDGET = TRADE_SLOTS * TRADE_TOTAL
+    exposure_calcuated = 0
 
     for coin in list(coins_bought):
         LastPrice = float(last_price[coin]['price'])
@@ -304,6 +308,8 @@ def balance_report(last_price):
         
         BuyPrice = float(coins_bought[coin]['bought_at'])
         buyFee = (BuyPrice * (TRADING_FEE/100))
+
+        exposure_calcuated = exposure_calcuated + round(float(coins_bought[coin]['bought_at']) * float(coins_bought[coin]['volume']),0)
 
         #PriceChangeIncFees_Perc = float(((LastPrice+sellFee) - (BuyPrice+buyFee)) / (BuyPrice+buyFee) * 100)
         PriceChangeIncFees_Total = float(((LastPrice+sellFee) - (BuyPrice+buyFee)) * coins_bought[coin]['volume'])
@@ -314,7 +320,8 @@ def balance_report(last_price):
     unrealised_session_profit_incfees_perc = (unrealised_session_profit_incfees_total / BUDGET) * 100
 
     DECIMALS = int(decimals())
-    CURRENT_EXPOSURE = round((TRADE_TOTAL * len(coins_bought)), DECIMALS)
+    # CURRENT_EXPOSURE = round((TRADE_TOTAL * len(coins_bought)), DECIMALS)
+    CURRENT_EXPOSURE = round(exposure_calcuated, 0)
     INVESTMENT_TOTAL = round((TRADE_TOTAL * TRADE_SLOTS), DECIMALS)
     
     # truncating some of the above values to the correct decimal places before printing
@@ -614,9 +621,9 @@ def sell_coins(tpsl_override = False):
             sell_reason = 'Session TPSL Override reached'
 
         if sellCoin:
-            print(f"{txcolors.SELL_PROFIT if PriceChangeIncFees_Perc >= 0. else txcolors.SELL_LOSS}Sell: {coins_bought[coin]['volume']} of {coin} | {sell_reason} | ${float(LastPrice):g} - ${float(BuyPrice):g} | Profit: {PriceChangeIncFees_Perc:.2f}% Est: {(TRADE_TOTAL*PriceChangeIncFees_Perc)/100:.{decimals()}f} {PAIR_WITH} (Inc Fees){txcolors.DEFAULT}")
+            print(f"{txcolors.SELL_PROFIT if PriceChangeIncFees_Perc >= 0. else txcolors.SELL_LOSS}Sell: {coins_bought[coin]['volume']} of {coin} | {sell_reason} | ${float(LastPrice):g} - ${float(BuyPrice):g} | Profit: {PriceChangeIncFees_Perc:.2f}% Est: {((float(coins_bought[coin]['volume'])*float(coins_bought[coin]['bought_at']))*PriceChangeIncFees_Perc)/100:.{decimals()}f} {PAIR_WITH} (Inc Fees){txcolors.DEFAULT}")
             
-            msg1 = 'SELL: ' + coin + '. T:' + str(datetime.now()) + ' R:' +  sell_reason + ' P%:' + str(round(PriceChangeIncFees_Perc,2)) + ' P$:' + str(round((TRADE_TOTAL*PriceChangeIncFees_Perc)/100,4))
+            msg1 = 'SELL: ' + coin + '. T:' + str(datetime.now()) + ' R:' +  sell_reason + ' P%:' + str(round(PriceChangeIncFees_Perc,2)) + ' P$:' + str(round(((float(coins_bought[coin]['volume'])*float(coins_bought[coin]['bought_at']))*PriceChangeIncFees_Perc)/100,4))
             msg_discord(msg1)
 
             # try to create a real order
@@ -695,7 +702,8 @@ def sell_coins(tpsl_override = False):
         # no action; print once every TIME_DIFFERENCE
         if hsp_head == 1:
             if len(coins_bought) > 0:
-                print(f"Holding: {coins_bought[coin]['volume']} of {coin} | {LastPrice} - {BuyPrice} | Profit: {txcolors.SELL_PROFIT if PriceChangeIncFees_Perc >= 0. else txcolors.SELL_LOSS}{PriceChangeIncFees_Perc:.4f}% Est: ({(TRADE_TOTAL*PriceChangeIncFees_Perc)/100:.{decimals()}f} {PAIR_WITH}){txcolors.DEFAULT}")
+                #print(f"Holding: {coins_bought[coin]['volume']} of {coin} | {LastPrice} - {BuyPrice} | Profit: {txcolors.SELL_PROFIT if PriceChangeIncFees_Perc >= 0. else txcolors.SELL_LOSS}{PriceChangeIncFees_Perc:.4f}% Est: ({(TRADE_TOTAL*PriceChangeIncFees_Perc)/100:.{decimals()}f} {PAIR_WITH}){txcolors.DEFAULT}")
+                print(f"Holding: {coins_bought[coin]['volume']} of {coin} | {LastPrice} - {BuyPrice} | Profit: {txcolors.SELL_PROFIT if PriceChangeIncFees_Perc >= 0. else txcolors.SELL_LOSS}{PriceChangeIncFees_Perc:.4f}% Est: ({((float(coins_bought[coin]['volume'])*float(coins_bought[coin]['bought_at']))*PriceChangeIncFees_Perc)/100:.{decimals()}f} {PAIR_WITH}){txcolors.DEFAULT}")
 
     if hsp_head == 1 and len(coins_bought) == 0: print(f"No trade slots are currently in use")
 
@@ -830,6 +838,7 @@ def update_bot_stats():
     global trade_wins, trade_losses, historic_profit_incfees_perc, historic_profit_incfees_total
 
     bot_stats = {
+        'total_capital' : str(TRADE_SLOTS * TRADE_TOTAL),
         'botstart_datetime' : str(bot_started_datetime),
         'historicProfitIncFees_Percent': historic_profit_incfees_perc,
         'historicProfitIncFees_Total': historic_profit_incfees_total,
@@ -1027,6 +1036,7 @@ if __name__ == '__main__':
     HISTORY_LOG_FILE = file_prefix + HISTORY_LOG_FILE
 
     bot_started_datetime = datetime.now()
+    total_capital_config = TRADE_SLOTS * TRADE_TOTAL
 
     if os.path.isfile(bot_stats_file_path) and os.stat(bot_stats_file_path).st_size!= 0:
         with open(bot_stats_file_path) as file:
@@ -1036,11 +1046,21 @@ if __name__ == '__main__':
                 bot_started_datetime = datetime.strptime(bot_stats['botstart_datetime'], '%Y-%m-%d %H:%M:%S.%f')
             except Exception as e:
                 print (f'Exception on reading botstart_datetime from {bot_stats_file_path}. Exception: {e}')   
+                bot_started_datetime = datetime.now()
             
+            try:
+                total_capital = bot_stats['total_capital']
+            except Exception as e:
+                print (f'Exception on reading total_capital from {bot_stats_file_path}. Exception: {e}')   
+                total_capital = TRADE_SLOTS * TRADE_TOTAL
+
             historic_profit_incfees_perc = bot_stats['historicProfitIncFees_Percent']
             historic_profit_incfees_total = bot_stats['historicProfitIncFees_Total']
             trade_wins = bot_stats['tradeWins']
             trade_losses = bot_stats['tradeLosses']
+
+            if total_capital != total_capital_config:
+                historic_profit_incfees_perc = (historic_profit_incfees_total / total_capital_config) * 100
 
     # rolling window of prices; cyclical queue
     historical_prices = [None] * (TIME_DIFFERENCE * RECHECK_INTERVAL)
@@ -1116,8 +1136,7 @@ if __name__ == '__main__':
 
             # ask user if they want to sell all coins
             print(f'\n\n\n')
-            print(f'{txcolors.WARNING}Program execution ended by user!{txcolors.DEFAULT}\n')
-            sellall = input(f'{txcolors.WARNING}Do you want to sell all coins (y/N)?{txcolors.DEFAULT}')
+            sellall = input(f'{txcolors.WARNING}Program execution ended by user!\n\nDo you want to sell all coins (y/N)?{txcolors.DEFAULT}')
             if sellall.upper() == "Y":
                 # sell all coins
                 sell_all('Program execution ended by user!')
