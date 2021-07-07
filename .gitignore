@@ -1,4 +1,5 @@
 creds.yml
+creds_usethis.yml
 trades.txt
 
 __*__
@@ -11,3 +12,10 @@ __*__
 
 # IDE settings
 .vscode
+
+# Don't upload log files
+*.log
+
+# Don't upload files
+test*.txt
+live*.txt
