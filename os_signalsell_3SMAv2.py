@@ -90,13 +90,13 @@ def analyze(pairs):
             continue
         
 
-        SMA20_5MIN = round(analysis5MIN.indicators['SMA5'],2)
-        SMA50_5MIN = round(analysis5MIN.indicators['SMA10'],2)
-        SMA100_5MIN = round(analysis5MIN.indicators['SMA20'],2)
+        SMA20_5MIN = round(analysis5MIN.indicators['SMA20'],2)
+        SMA50_5MIN = round(analysis5MIN.indicators['SMA50'],2)
+        SMA100_5MIN = round(analysis5MIN.indicators['SMA100'],2)
 
-        SMA20_15MIN = round(analysis15MIN.indicators['SMA5'],2)
-        SMA50_15MIN = round(analysis15MIN.indicators['SMA10'],2)
-        SMA100_15MIN = round(analysis15MIN.indicators['SMA20'],2)
+        SMA20_15MIN = round(analysis15MIN.indicators['SMA20'],2)
+        SMA50_15MIN = round(analysis15MIN.indicators['SMA50'],2)
+        SMA100_15MIN = round(analysis15MIN.indicators['SMA100'],2)
         
         ACTION = 'NOTHING'
         
