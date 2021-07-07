@@ -672,7 +672,7 @@ def sell_coins(tpsl_override = False):
                 #BB profit = ((LastPrice - BuyPrice) * coins_sold[coin]['volume']) * (1-(buyFee + sellFeeTotal))
                 profit_incfees_total = coins_sold[coin]['volume'] * PriceChangeIncFees_Unit
                 #write_log(f"Sell: {coins_sold[coin]['volume']} {coin} - {BuyPrice} - {LastPrice} Profit: {profit_incfees_total:.{decimals()}f} {PAIR_WITH} ({PriceChange_Perc:.2f}%)")
-                write_log(f"\tSell\t{coin}\t{coins_sold[coin]['volume']}\t{BuyPrice}\t{PAIR_WITH}\t{LastPrice}\t{profit_incfees_total:.{decimals()}f}\t{PriceChange_Perc:.2f}")
+                write_log(f"\tSell\t{coin}\t{coins_sold[coin]['volume']}\t{BuyPrice}\t{PAIR_WITH}\t{LastPrice}\t{profit_incfees_total:.{decimals()}f}\t{PriceChange_Perc:.2f}\t{sell_reason}")
                 
                 #this is good
                 session_profit_incfees_total = session_profit_incfees_total + profit_incfees_total
@@ -869,7 +869,7 @@ def write_log(logline):
 
     if not os.path.exists(LOG_FILE):
         with open(LOG_FILE,'a+') as f:
-            f.write('Datetime\tType\tCoin\tVolume\tBuy Price\tCurrency\tSell Price\tProfit $\tProfit %\n')    
+            f.write('Datetime\tType\tCoin\tVolume\tBuy Price\tCurrency\tSell Price\tProfit $\tProfit %\tSell Reason\n')    
 
     with open(LOG_FILE,'a+') as f:
         f.write(timestamp + ' ' + logline + '\n')
