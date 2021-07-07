@@ -350,8 +350,25 @@ def balance_report(last_price):
     msg = msg + ' CTT: ' + str(trade_wins+trade_losses) + ' CTW: ' + str(trade_wins) + ' CTL: ' + str(trade_losses) + ' CTWR%: ' + str(round(WIN_LOSS_PERCENT,2))
 
     msg_discord_balance(msg)
+    history_log(session_profit_incfees_perc, session_profit_incfees_total, unrealised_session_profit_incfees_perc, unrealised_session_profit_incfees_total, session_profit_incfees_perc + unrealised_session_profit_incfees_perc, session_profit_incfees_total+unrealised_session_profit_incfees_total, historic_profit_incfees_perc, historic_profit_incfees_total, trade_wins+trade_losses, trade_wins, trade_losses, WIN_LOSS_PERCENT)
 
     return msg
+
+def history_log(sess_profit_perc, sess_profit, sess_profit_perc_unreal, sess_profit_unreal, sess_profit_perc_total, sess_profit_total, alltime_profit_perc, alltime_profit, total_trades, won_trades, lost_trades, winloss_ratio):
+    global last_history_log_date
+    time_between_insertion = datetime.now() - last_history_log_date
+
+    # only log balance to log file once every 60 seconds
+    if time_between_insertion.seconds > 60:
+        last_history_log_date = datetime.now()
+        timestamp = datetime.now().strftime("%y/%m/%d %H:%M:%S")
+
+        if not os.path.exists(HISTORY_LOG_FILE):
+            with open(HISTORY_LOG_FILE,'a+') as f:
+                f.write('Datetime\tCoins Holding\tTrade Slots\tPausebot Active\tSession Profit %\tSession Profit $\tSession Profit Unrealised %\tSession Profit Unrealised $\tSession Profit Total %\tSession Profit Total $\tAll Time Profit %\tAll Time Profit $\tTotal Trades\tWon Trades\tLost Trades\tWin Loss Ratio\n')    
+
+        with open(HISTORY_LOG_FILE,'a+') as f:
+            f.write(f'{timestamp}\t{len(coins_bought)}\t{TRADE_SLOTS}\t{str(bot_paused)}\t{str(round(sess_profit_perc,2))}\t{str(round(sess_profit,4))}\t{str(round(sess_profit_perc_unreal,2))}\t{str(round(sess_profit_unreal,4))}\t{str(round(sess_profit_perc_total,2))}\t{str(round(sess_profit_total,4))}\t{str(round(alltime_profit_perc,2))}\t{str(round(alltime_profit,4))}\t{str(total_trades)}\t{str(won_trades)}\t{str(lost_trades)}\t{str(winloss_ratio)}\n')
 
 def msg_discord_balance(msg):
     global last_msg_discord_balance_date
@@ -839,7 +856,7 @@ def remove_from_portfolio(coins_sold):
     
 
 def write_log(logline):
-    timestamp = datetime.now().strftime("%d/%m %H:%M:%S")
+    timestamp = datetime.now().strftime("%y/%d/%d %H:%M:%S")
 
     if not os.path.exists(LOG_FILE):
         with open(LOG_FILE,'a+') as f:
@@ -896,6 +913,7 @@ if __name__ == '__main__':
     mymodule = {}
 
     last_msg_discord_balance_date = datetime.now()
+    last_history_log_date = datetime.now()
 
     # set to false at Start
     global bot_paused
@@ -916,6 +934,7 @@ if __name__ == '__main__':
     TEST_MODE = parsed_config['script_options']['TEST_MODE']
     #     LOG_TRADES = parsed_config['script_options'].get('LOG_TRADES')
     LOG_FILE = parsed_config['script_options'].get('LOG_FILE')
+    HISTORY_LOG_FILE = "history.txt"
     DEBUG_SETTING = parsed_config['script_options'].get('DEBUG')
     AMERICAN_USER = parsed_config['script_options'].get('AMERICAN_USER')
 
@@ -932,7 +951,7 @@ if __name__ == '__main__':
     STOP_LOSS = parsed_config['trading_options']['STOP_LOSS']
     TAKE_PROFIT = parsed_config['trading_options']['TAKE_PROFIT']
     
-    COOLOFF_PERIOD = parsed_config['trading_options']['COOLOFF_PERIOD']
+    #COOLOFF_PERIOD = parsed_config['trading_options']['COOLOFF_PERIOD']
 
     CUSTOM_LIST = parsed_config['trading_options']['CUSTOM_LIST']
     TICKERS_LIST = parsed_config['trading_options']['TICKERS_LIST']
@@ -1005,6 +1024,7 @@ if __name__ == '__main__':
 
     # use separate files for testing and live trading
     LOG_FILE = file_prefix + LOG_FILE
+    HISTORY_LOG_FILE = file_prefix + HISTORY_LOG_FILE
 
     bot_started_datetime = datetime.now()
 
