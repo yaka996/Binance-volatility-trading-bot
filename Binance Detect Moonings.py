@@ -368,7 +368,7 @@ def history_log(sess_profit_perc, sess_profit, sess_profit_perc_unreal, sess_pro
     # only log balance to log file once every 60 seconds
     if time_between_insertion.seconds > 60:
         last_history_log_date = datetime.now()
-        timestamp = datetime.now().strftime("%y/%m/%d %H:%M:%S")
+        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
         if not os.path.exists(HISTORY_LOG_FILE):
             with open(HISTORY_LOG_FILE,'a+') as f:
@@ -870,7 +870,7 @@ def remove_from_portfolio(coins_sold):
     
 
 def write_log(logline):
-    timestamp = datetime.now().strftime("%d/%m/%y %H:%M:%S")
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
     if not os.path.exists(LOG_FILE):
         with open(LOG_FILE,'a+') as f:
