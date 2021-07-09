@@ -605,10 +605,10 @@ def sell_coins(tpsl_override = False):
         else:
             if LastPrice < SL: 
                 sellCoin = True
-                sell_reason = "TP " + str(TP) + " reached"
+                sell_reason = "SL " + str(TP) + " reached"
             if LastPrice > TP:
                 sellCoin = True
-                sell_reason = "SL " + str(SL) + " reached"
+                sell_reason = "TP " + str(SL) + " reached"
             if coin in externals:
                 sellCoin = True
                 sell_reason = 'External Sell Signal'
@@ -643,36 +643,39 @@ def sell_coins(tpsl_override = False):
                         symbol = coin,
                         side = 'SELL',
                         type = 'MARKET',
-                        #quantity = coins_bought[coin]['volume']
-                        quantity = rounded_amount
+                        quantity = coins_bought[coin]['volume']
+                        #quantity = rounded_amount
                     )
 
             # error handling here in case position cannot be placed
             except Exception as e:
-                print(e)
+                print(f"sell_coins() Exception occured on selling the coin! Coin: {coin}\nSell Volume: {coins_bought[coin]['volume']}\nSell Volume Rounded: {rounded_amount}\nPrice:{LastPrice}\nException: {e}")
 
             # run the else block if coin has been sold and create a dict for each coin sold
             else:
                 if not TEST_MODE:
                     coins_sold[coin] = extract_order_data(order_details)
-                    lastPrice = coins_sold[coin]['avgPrice']
+                    LastPrice = coins_sold[coin]['avgPrice']
                     sellFee = coins_sold[coin]['tradeFeeUnit']
                     coins_sold[coin]['orderid'] = coins_bought[coin]['orderid']
-                    priceChange = float((lastPrice - buyPrice) / buyPrice * 100)
+                    priceChange = float((LastPrice - buyPrice) / buyPrice * 100)
 
                     # update this from the actual Binance sale information
-                    PriceChangeIncFees_Unit = float((lastPrice+sellFee) - (BuyPrice+buyFee))
+                    PriceChangeIncFees_Unit = float((LastPrice+sellFee) - (BuyPrice+buyFee))
                 else:
                     coins_sold[coin] = coins_bought[coin]
 
                 # prevent system from buying this coin for the next TIME_DIFFERENCE minutes
                 volatility_cooloff[coin] = datetime.now()
 
+                if DEBUG:
+                    print(f"sell_coins() | Coin: {coin} | Sell Volume: {coins_bought[coin]['volume']} | Sell Volume Rounded: {rounded_amount} | Price:{LastPrice}")
+
                 # Log trade
-                #BB profit = ((LastPrice - BuyPrice) * coins_sold[coin]['volume']) * (1-(buyFee + sellFeeTotal))
+                #BB profit = ((LastPrice - BuyPrice) * coins_sold[coin]['volume']) * (1-(buyFee + sellFeeTotal))                
                 profit_incfees_total = coins_sold[coin]['volume'] * PriceChangeIncFees_Unit
                 #write_log(f"Sell: {coins_sold[coin]['volume']} {coin} - {BuyPrice} - {LastPrice} Profit: {profit_incfees_total:.{decimals()}f} {PAIR_WITH} ({PriceChange_Perc:.2f}%)")
-                write_log(f"\tSell\t{coin}\t{coins_sold[coin]['volume']}\t{BuyPrice}\t{PAIR_WITH}\t{LastPrice}\t{profit_incfees_total:.{decimals()}f}\t{PriceChange_Perc:.2f}\t{sell_reason}")
+                write_log(f"\tSell\t{coin}\t{coins_sold[coin]['volume']}\t{BuyPrice}\t{PAIR_WITH}\t{LastPrice}\t{profit_incfees_total:.{decimals()}f}\t{PriceChange_Perc:.2f}\t{sell_reason}\t{rounded_amount}")
                 
                 #this is good
                 session_profit_incfees_total = session_profit_incfees_total + profit_incfees_total
