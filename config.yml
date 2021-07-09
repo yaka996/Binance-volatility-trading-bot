@@ -44,10 +44,10 @@ trading_options:
   RECHECK_INTERVAL: 10
 
   # the difference in % between the first and second checks for the price.
-  CHANGE_IN_PRICE: 10
+  CHANGE_IN_PRICE: 2
 
   # define in % when to sell a coin that's not making a profit.
-  STOP_LOSS: 5
+  STOP_LOSS: 3
 
   # define in % when to take profit on a profitable coin.
   TAKE_PROFIT: .8
@@ -92,7 +92,7 @@ trading_options:
     #
     # - os_signalbuy_RECOMM
     # - os_signalsell_RECOMM
-    - os_signalbuy_3SMAv2
+    # - os_signalbuy_3SMAv2
     - os_pausebot_MAv2
     
   
