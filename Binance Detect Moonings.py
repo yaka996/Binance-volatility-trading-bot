@@ -395,7 +395,8 @@ def msg_discord(msg):
         mUrl = "https://discordapp.com/api/webhooks/"+DISCORD_WEBHOOK
         data = {"content": message}
         response = requests.post(mUrl, json=data)
-        print(response.content)
+        #BB
+        # print(response.content)
 
 def pause_bot():
     '''Pause the script when external indicators detect a bearish trend in the market'''
@@ -637,6 +638,7 @@ def sell_coins(tpsl_override = False):
                     rounded_amount = round_step_size(coins_bought[coin]['volume'], tick_size)
                 except Exception:
                     rounded_amount = coins_bought[coin]['volume']
+            
             try:
                 if not TEST_MODE:
                     order_details = client.create_order(
@@ -1109,7 +1111,7 @@ if __name__ == '__main__':
         else:
             print(f'No modules to load {SIGNALLING_MODULES}')
     except Exception as e:
-        print(e)
+        print(f'Loading external signals exception: {e}')
 
     # seed initial prices
     get_price()
