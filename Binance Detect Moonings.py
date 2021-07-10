@@ -607,7 +607,10 @@ def sell_coins(tpsl_override = False):
             if LastPrice < SL: 
                 sellCoin = True
                 if USE_TRAILING_STOP_LOSS:
-                    sell_reason = "TTP/TSL "
+                    if PriceChange_Perc >= 0:
+                        sell_reason = "TTP "
+                    else:
+                        sell_reason = "TSL "
                 else:
                     sell_reason = "SL "    
                 sell_reason = sell_reason + str(TP) + " reached"
