@@ -606,7 +606,11 @@ def sell_coins(tpsl_override = False):
         else:
             if LastPrice < SL: 
                 sellCoin = True
-                sell_reason = "SL " + str(TP) + " reached"
+                if USE_TRAILING_STOP_LOSS:
+                    sell_reason = "TTP/TSL "
+                else:
+                    sell_reason = "SL "    
+                sell_reason = sell_reason + str(TP) + " reached"
             if LastPrice > TP:
                 sellCoin = True
                 sell_reason = "TP " + str(SL) + " reached"
@@ -660,7 +664,7 @@ def sell_coins(tpsl_override = False):
                     LastPrice = coins_sold[coin]['avgPrice']
                     sellFee = coins_sold[coin]['tradeFeeUnit']
                     coins_sold[coin]['orderid'] = coins_bought[coin]['orderid']
-                    priceChange = float((LastPrice - buyPrice) / buyPrice * 100)
+                    priceChange = float((LastPrice - BuyPrice) / BuyPrice * 100)
 
                     # update this from the actual Binance sale information
                     PriceChangeIncFees_Unit = float((LastPrice+sellFee) - (BuyPrice+buyFee))
@@ -921,6 +925,11 @@ def stop_signal_threads():
         pass
 
 if __name__ == '__main__':
+
+    req_version = (3,9)
+    if sys.version_info[:2] < req_version: 
+        print(f'This bot requires Python version 3.9 or higher/newer. You are running version {sys.version_info[:2]} - please upgrade your Python version!!')
+        sys.exit()
 
     # Load arguments then parse settings
     args = parse_args()
