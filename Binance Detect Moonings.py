@@ -349,17 +349,19 @@ def balance_report(last_price):
     print(f'--------')
     print(f'')
     
-    msg = str(bot_started_datetime) + " | " + str(datetime.now() - bot_started_datetime) + " | " + str(len(coins_bought)) + "/" + str(TRADE_SLOTS) + " | PBOT: " + str(bot_paused)
-    msg = msg + ' SPR%: ' + str(round(session_profit_incfees_perc,2)) + ' SPR$: ' + str(round(session_profit_incfees_total,4))
-    msg = msg + ' SPU%: ' + str(round(unrealised_session_profit_incfees_perc,2)) + ' SPU$: ' + str(round(unrealised_session_profit_incfees_total,4))
-    msg = msg + ' SPT%: ' + str(round(session_profit_incfees_perc + unrealised_session_profit_incfees_perc,2)) + ' SPT$: ' + str(round(session_profit_incfees_total+unrealised_session_profit_incfees_total,4))
-    msg = msg + ' ATP%: ' + str(round(historic_profit_incfees_perc,2)) + ' ATP$: ' + str(round(historic_profit_incfees_total,4))
-    msg = msg + ' CTT: ' + str(trade_wins+trade_losses) + ' CTW: ' + str(trade_wins) + ' CTL: ' + str(trade_losses) + ' CTWR%: ' + str(round(WIN_LOSS_PERCENT,2))
+    #msg1 = str(bot_started_datetime) + " | " + str(datetime.now() - bot_started_datetime)
+    msg1 = str(datetime.now())
+    msg2 = " | " + str(len(coins_bought)) + "/" + str(TRADE_SLOTS) + " | PBOT: " + str(bot_paused)
+    msg2 = msg2 + ' SPR%: ' + str(round(session_profit_incfees_perc,2)) + ' SPR$: ' + str(round(session_profit_incfees_total,4))
+    msg2 = msg2 + ' SPU%: ' + str(round(unrealised_session_profit_incfees_perc,2)) + ' SPU$: ' + str(round(unrealised_session_profit_incfees_total,4))
+    msg2 = msg2 + ' SPT%: ' + str(round(session_profit_incfees_perc + unrealised_session_profit_incfees_perc,2)) + ' SPT$: ' + str(round(session_profit_incfees_total+unrealised_session_profit_incfees_total,4))
+    msg2 = msg2 + ' ATP%: ' + str(round(historic_profit_incfees_perc,2)) + ' ATP$: ' + str(round(historic_profit_incfees_total,4))
+    msg2 = msg2 + ' CTT: ' + str(trade_wins+trade_losses) + ' CTW: ' + str(trade_wins) + ' CTL: ' + str(trade_losses) + ' CTWR%: ' + str(round(WIN_LOSS_PERCENT,2))
 
-    msg_discord_balance(msg)
+    msg_discord_balance(msg1, msg2)
     history_log(session_profit_incfees_perc, session_profit_incfees_total, unrealised_session_profit_incfees_perc, unrealised_session_profit_incfees_total, session_profit_incfees_perc + unrealised_session_profit_incfees_perc, session_profit_incfees_total+unrealised_session_profit_incfees_total, historic_profit_incfees_perc, historic_profit_incfees_total, trade_wins+trade_losses, trade_wins, trade_losses, WIN_LOSS_PERCENT)
 
-    return msg
+    return msg1 + msg2
 
 def history_log(sess_profit_perc, sess_profit, sess_profit_perc_unreal, sess_profit_unreal, sess_profit_perc_total, sess_profit_total, alltime_profit_perc, alltime_profit, total_trades, won_trades, lost_trades, winloss_ratio):
     global last_history_log_date
@@ -377,14 +379,18 @@ def history_log(sess_profit_perc, sess_profit, sess_profit_perc_unreal, sess_pro
         with open(HISTORY_LOG_FILE,'a+') as f:
             f.write(f'{timestamp}\t{len(coins_bought)}\t{TRADE_SLOTS}\t{str(bot_paused)}\t{str(round(sess_profit_perc,2))}\t{str(round(sess_profit,4))}\t{str(round(sess_profit_perc_unreal,2))}\t{str(round(sess_profit_unreal,4))}\t{str(round(sess_profit_perc_total,2))}\t{str(round(sess_profit_total,4))}\t{str(round(alltime_profit_perc,2))}\t{str(round(alltime_profit,4))}\t{str(total_trades)}\t{str(won_trades)}\t{str(lost_trades)}\t{str(winloss_ratio)}\n')
 
-def msg_discord_balance(msg):
-    global last_msg_discord_balance_date
+def msg_discord_balance(msg1, msg2):
+    global last_msg_discord_balance_date, discord_msg_balance_data
     time_between_insertion = datetime.now() - last_msg_discord_balance_date
     
-    # only put the balance message to discord once every 60 seconds
+    # only put the balance message to discord once every 60 seconds and if the balance information has changed since last times
     if time_between_insertion.seconds > 60:
-        last_msg_discord_balance_date = datetime.now()
-        msg_discord(msg) 
+        if msg2 != discord_msg_balance_data:
+            msg_discord(msg1 + msg2)
+            discord_msg_balance_data = msg2
+        else:
+            # ping msg to know the bot is still running
+            msg_discord(".")
 
 def msg_discord(msg):
 
@@ -413,7 +419,7 @@ def pause_bot():
         if bot_paused == False:
             print(f'{txcolors.WARNING}Buying paused due to negative market conditions, stop loss and take profit will continue to work...{txcolors.DEFAULT}')
             
-            msg = 'PAUSEBOT. T:' + str(datetime.now()) + '. Buying paused due to negative market conditions, stop loss and take profit will continue to work...'
+            msg = str(datetime.now()) + ' | PAUSEBOT. Buying paused due to negative market conditions, stop loss and take profit will continue to work.'
             msg_discord(msg)
 
             bot_paused = True
@@ -439,7 +445,7 @@ def pause_bot():
         if  bot_paused == True:
             print(f'{txcolors.WARNING}Resuming buying due to positive market conditions, total sleep time: {time_elapsed}{txcolors.DEFAULT}')
             
-            msg = 'PAUSEBOT. T:' + str(datetime.now()) + '. Resuming buying due to positive market conditions, total sleep time: ' + str(time_elapsed)
+            msg = str(datetime.now()) + ' | PAUSEBOT. Resuming buying due to positive market conditions, total sleep time: ' + str(time_elapsed)
             msg_discord(msg)
 
             bot_paused = False
@@ -497,7 +503,7 @@ def buy():
         if coin not in coins_bought:
             print(f"{txcolors.BUY}Preparing to buy {volume[coin]} of {coin} @ ${last_price[coin]['price']}{txcolors.DEFAULT}")
 
-            msg1 = 'BUY: ' + coin + '. T:' + str(datetime.now()) + ' V:' +  str(volume[coin]) + ' P$:' + str(last_price[coin]['price'])
+            msg1 = str(datetime.now()) + ' | BUY: ' + coin + '. V:' +  str(volume[coin]) + ' P$:' + str(last_price[coin]['price'])
             msg_discord(msg1)
 
             if TEST_MODE:
@@ -631,7 +637,7 @@ def sell_coins(tpsl_override = False):
         if sellCoin:
             print(f"{txcolors.SELL_PROFIT if PriceChangeIncFees_Perc >= 0. else txcolors.SELL_LOSS}Sell: {coins_bought[coin]['volume']} of {coin} | {sell_reason} | ${float(LastPrice):g} - ${float(BuyPrice):g} | Profit: {PriceChangeIncFees_Perc:.2f}% Est: {((float(coins_bought[coin]['volume'])*float(coins_bought[coin]['bought_at']))*PriceChangeIncFees_Perc)/100:.{decimals()}f} {PAIR_WITH} (Inc Fees){txcolors.DEFAULT}")
             
-            msg1 = 'SELL: ' + coin + '. T:' + str(datetime.now()) + ' R:' +  sell_reason + ' P%:' + str(round(PriceChangeIncFees_Perc,2)) + ' P$:' + str(round(((float(coins_bought[coin]['volume'])*float(coins_bought[coin]['bought_at']))*PriceChangeIncFees_Perc)/100,4))
+            msg1 = str(datetime.now()) + '| SELL: ' + coin + '. R:' +  sell_reason + ' P%:' + str(round(PriceChangeIncFees_Perc,2)) + ' P$:' + str(round(((float(coins_bought[coin]['volume'])*float(coins_bought[coin]['bought_at']))*PriceChangeIncFees_Perc)/100,4))
             msg_discord(msg1)
 
             # try to create a real order
@@ -902,7 +908,7 @@ def remove_external_signals(fileext):
 def sell_all(msgreason, session_tspl_ovr = False):
     global sell_all_coins
 
-    msg_discord(f'SELL ALL COINS: {msgreason}')
+    msg_discord(f'{str(datetime.now())} | SELL ALL COINS: {msgreason}')
 
     # stop external signals so no buying/selling/pausing etc can occur
     stop_signal_threads()
@@ -938,6 +944,7 @@ if __name__ == '__main__':
     args = parse_args()
     mymodule = {}
 
+    discord_msg_balance_data = ""
     last_msg_discord_balance_date = datetime.now()
     last_history_log_date = datetime.now()
 
