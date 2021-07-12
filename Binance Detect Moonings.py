@@ -664,7 +664,14 @@ def sell_coins(tpsl_override = False):
 
             # error handling here in case position cannot be placed
             except Exception as e:
-                print(f"sell_coins() Exception occured on selling the coin! Coin: {coin}\nSell Volume: {coins_bought[coin]['volume']}\nSell Volume Rounded: {rounded_amount}\nPrice:{LastPrice}\nException: {e}")
+                if e.upper() == "APIERROR(CODE=-1111): PRECISION IS OVER THE MAXIMUM DEFINED FOR THIS ASSET.":
+                    
+                    print(f"sell_coins() Exception occured on selling the coin! Coin: {coin}\nSell Volume: {coins_bought[coin]['volume']}\nSell Volume Rounded: {rounded_amount}\nPrice:{LastPrice}\nException: {e}")
+                    print(f"Setting volume from {coins_bought[coin]['volume']} to {rounded_amount} and will retry sell!")
+
+                    coins_bought[coin]['volume'] = rounded_amount
+                else:
+                    print(f"sell_coins() Exception occured on selling the coin! Coin: {coin}\nSell Volume: {coins_bought[coin]['volume']}\nSell Volume Rounded: {rounded_amount}\nPrice:{LastPrice}\nException: {e}")
 
             # run the else block if coin has been sold and create a dict for each coin sold
             else:
