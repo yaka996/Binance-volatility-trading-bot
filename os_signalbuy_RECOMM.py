@@ -19,9 +19,17 @@ PAIR_WITH = 'USDT'
 
 TIME_TO_WAIT = 1 # Minutes to wait between analysis
 FULL_LOG = True # List anylysis result to console
+
 SIGNAL_NAME = 'os_signalbuy_RECOMM'
 SIGNAL_FILE = 'signals/' + SIGNAL_NAME + '.buy'
+
 TICKERS = 'tickers.txt'
+TICKERS_OVERRIDE = 'tickers_signalbuy.txt'
+
+if os.path.exists(TICKERS_OVERRIDE):
+    TICKERS = TICKERS_OVERRIDE
+
+
 TRADINGVIEW_EX_FILE = 'tradingview_ta_unknown'
 
 def analyze(pairs):

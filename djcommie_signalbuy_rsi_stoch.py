@@ -38,6 +38,11 @@ EXCHANGE = 'BINANCE'
 SCREENER = 'CRYPTO'
 PAIR_WITH = 'USDT'
 TICKERS = 'tickers.txt' #'signalsample.txt'
+TICKERS_OVERRIDE = 'tickers_signalbuy.txt'
+
+if os.path.exists(TICKERS_OVERRIDE):
+    TICKERS = TICKERS_OVERRIDE
+
 TIME_TO_WAIT = 1 # Minutes to wait between analysis
 FULL_LOG = False # List analysis result to console
 DEBUG = True
