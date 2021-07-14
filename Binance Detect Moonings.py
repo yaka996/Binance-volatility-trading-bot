@@ -664,7 +664,7 @@ def sell_coins(tpsl_override = False):
 
             # error handling here in case position cannot be placed
             except Exception as e:
-                if e.upper() == "APIERROR(CODE=-1111): PRECISION IS OVER THE MAXIMUM DEFINED FOR THIS ASSET.":
+                if repr(e).upper() == "APIERROR(CODE=-1111): PRECISION IS OVER THE MAXIMUM DEFINED FOR THIS ASSET.":
                     
                     print(f"sell_coins() Exception occured on selling the coin! Coin: {coin}\nSell Volume: {coins_bought[coin]['volume']}\nSell Volume Rounded: {rounded_amount}\nPrice:{LastPrice}\nException: {e}")
                     print(f"Setting volume from {coins_bought[coin]['volume']} to {rounded_amount} and will retry sell!")
