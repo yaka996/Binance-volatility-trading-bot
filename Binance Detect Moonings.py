@@ -1,4 +1,7 @@
 """
+Olorin Sledge Fork
+Version: 1.08
+
 Disclaimer
 
 All investment strategies and investments involve risk of loss.
@@ -12,7 +15,10 @@ and that no claims can be made against the developers,
 or others connected with the program.
 
 See requirements.txt for versions of modules needed
-Requires Python version 3.9.x to run
+
+Notes:
+- Requires Python version 3.9.x to run
+
 """
 
 # use for environment variables
@@ -646,6 +652,13 @@ def sell_coins(tpsl_override = False):
             # try to create a real order          
             try:
                 if not TEST_MODE:
+                    #lot_size = coins_bought[coin]['step_size']
+                    #if lot_size == 0:
+                    #    lot_size = 1
+                    #lot_size = lot_size.index('1') - 1
+                    #if lot_size < 0:
+                    #    lot_size = 0
+                    
                     order_details = client.create_order(
                         symbol = coin,
                         side = 'SELL',
