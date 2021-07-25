@@ -1,6 +1,6 @@
 """
 Olorin Sledge Fork
-Version: 1.08
+Version: 1.09
 
 Disclaimer
 
@@ -771,6 +771,19 @@ def extract_order_data(order_details):
     # Olorin Sledge: I only want fee at the unit level, not the total level
     tradeFeeApprox = float(FILL_AVG) * (TRADING_FEE/100)
 
+    # the volume size is sometimes outside of precision, correct it
+    try:
+        info = client.get_symbol_info(coin)
+        step_size = info['filters'][2]['stepSize']
+        lot_size = step_size.index('1') - 1
+
+        if lot_size <= 0:
+            FILLS_QTY = int(FILLS_QTY)
+        else:
+            FILLS_QTY = truncate(FILLS_QTY, lot_size)
+    except Exception as e:
+        print(f"extract_order_data(): Exception getting coin {coin} step size! Exception: {e}")
+
     # create object with received data from Binance
     transactionInfo = {
         'symbol': order_details['symbol'],
@@ -831,6 +844,7 @@ def update_portfolio(orders, last_price, volume):
                'timestamp': orders[coin]['timestamp'],
                'bought_at': orders[coin]['avgPrice'],
                'volume': orders[coin]['volume'],
+               'volume_debug': volume[coin],
                'buyFeeBNB': orders[coin]['tradeFeeBNB'],
                'buyFee': orders[coin]['tradeFeeUnit'] * orders[coin]['volume'],
                'stop_loss': -STOP_LOSS,
