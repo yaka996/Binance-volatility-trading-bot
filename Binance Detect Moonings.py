@@ -19,6 +19,17 @@ See requirements.txt for versions of modules needed
 Notes:
 - Requires Python version 3.9.x to run
 
+Functionality:
+- Changed way profit % is calculated to be based on ROI
+- More details provided on screen on state of bot (i.e.  unrealised session profit, session profit, all time profit, bot paused or not etc)
+- Totally reworked external signals. NOTE: you CANNOT use the default signals anymore with my bot unless you modify them to work with it
+- Sell all coins on stopping bot functionality
+- Stop bot on session profit / session stop loss trigger
+- Discord support
+- Better reporting in trades.txt
+- A history.txt that records state of bot every minute (useful for past analysis /charting)
+- Better error trapping on certain exceptions
+
 """
 
 # use for environment variables
