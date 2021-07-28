@@ -266,7 +266,9 @@ def wait_for_price():
 
     for excoin in externals:
         if excoin not in volatile_coins and excoin not in coins_bought and \
-                (len(coins_bought) + exnumber + len(volatile_coins)) < TRADE_SLOTS:
+                (len(coins_bought) + len(volatile_coins)) < TRADE_SLOTS:
+
+            #(len(coins_bought) + exnumber + len(volatile_coins)) < TRADE_SLOTS:
             volatile_coins[excoin] = 1
             exnumber +=1
             print(f"External signal received on {excoin}, purchasing ${TRADE_TOTAL} {PAIR_WITH} value of {excoin}!")
@@ -1190,6 +1192,7 @@ if __name__ == '__main__':
     get_price()
     TIMEOUT_COUNT=0
     READ_CONNECTERR_COUNT=0
+    BINANCE_API_EXCEPTION=0
 
     while is_bot_running:
         try:
@@ -1208,6 +1211,9 @@ if __name__ == '__main__':
         except ConnectionError as ce:
             READ_CONNECTERR_COUNT += 1
             print(f'We got a connection error from Binance. Re-loop. Connection Errors so far: {READ_CONNECTERR_COUNT}')
+        except BinanceAPIException as bapie:
+            BINANCE_API_EXCEPTION += 1
+            print(f'We got an API error from Binance. Re-loop. API Errors so far: {BINANCE_API_EXCEPTION}.\nException:\n{bapie}')
         except KeyboardInterrupt as ki:
             # stop external signal threads
             stop_signal_threads()
