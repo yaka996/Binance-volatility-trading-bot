@@ -8,6 +8,7 @@ import sys
 # used for directory handling
 import glob
 
+import threading
 import time
 
 MY_EXCHANGE = 'BINANCE'
@@ -129,8 +130,8 @@ def do_work():
             print(f'{SIGNAL_NAME}: {len(signal_coins)} coins with Buy Signals. Waiting {TIME_TO_WAIT} minutes for next analysis.')
 
             time.sleep((TIME_TO_WAIT*60))
-        except Exception as e:
-            print(f'{SIGNAL_NAME}: Exception do_work() 1: {e}')
-            continue
+        #except Exception as e:
+        #    print(f'{SIGNAL_NAME}: Exception do_work() 1: {e}')
+        #    continue
         except KeyboardInterrupt as ki:
             continue
