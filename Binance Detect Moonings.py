@@ -1,6 +1,6 @@
 """
 Olorin Sledge Fork
-Version: 1.11
+Version: 1.12
 
 Disclaimer
 
@@ -645,15 +645,15 @@ def sell_coins(tpsl_override = False):
                 sellCoin = True
                 if USE_TRAILING_STOP_LOSS:
                     if PriceChange_Perc >= 0:
-                        sell_reason = "TTP "
+                        sell_reason = "TTP " + str(TP) + " reached"
                     else:
-                        sell_reason = "TSL "
+                        sell_reason = "TSL " + str(SL) + " reached"
                 else:
-                    sell_reason = "SL "    
-                sell_reason = sell_reason + str(TP) + " reached"
+                    sell_reason = "SL " + str(SL) + " reached"
+                sell_reason = sell_reason 
             if LastPrice > TP:
                 sellCoin = True
-                sell_reason = "TP " + str(SL) + " reached"
+                sell_reason = "TP " + str(TP) + " reached"
             if coin in externals:
                 sellCoin = True
                 sell_reason = 'External Sell Signal'
