@@ -1,6 +1,6 @@
 """
 Olorin Sledge Fork
-Version: 1.13
+Version: 1.14
 
 Disclaimer
 
@@ -632,6 +632,11 @@ def sell_coins(tpsl_override = False):
                 # so you don't get stopped out of the trade prematurely
                 coins_bought[coin]['stop_loss'] = coins_bought[coin]['take_profit'] - TRAILING_STOP_LOSS
                 coins_bought[coin]['take_profit'] = PriceChange_Perc + TRAILING_TAKE_PROFIT
+
+            # we've got a negative stop loss - not good, we don't want this.
+            if coins_bought[coin]['stop_loss'] <= 0:
+                coins_bought[coin]['stop_loss'] = coins_bought[coin]['take_profit'] * .25
+                
             # if DEBUG: print(f"{coin} TP reached, adjusting TP {coins_bought[coin]['take_profit']:.2f}  and SL {coins_bought[coin]['stop_loss']:.2f} accordingly to lock-in profit")
             if DEBUG: print(f"{coin} TP reached, adjusting TP {coins_bought[coin]['take_profit']:.{decimals()}f} and SL {coins_bought[coin]['stop_loss']:.{decimals()}f} accordingly to lock-in profit")
             continue
