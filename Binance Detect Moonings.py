@@ -1,6 +1,6 @@
 """
 Olorin Sledge Fork
-Version: 1.12
+Version: 1.13
 
 Disclaimer
 
@@ -29,7 +29,7 @@ Functionality:
 - Better reporting in trades.txt
 - A history.txt that records state of bot every minute (useful for past analysis /charting)
 - Better error trapping on certain exceptions
-
+- BNB is no longer used as the reference for TIME_DIFFERENCE, this allows one to not have it in their tickers.txt list.
 """
 
 # use for environment variables
@@ -207,10 +207,14 @@ def wait_for_price():
 
     pause_bot()
 
-    if historical_prices[hsp_head]['BNB' + PAIR_WITH]['time'] > datetime.now() - timedelta(minutes=float(TIME_DIFFERENCE / RECHECK_INTERVAL)):
+    # get first element from the dictionary
+    firstcoin = next(iter(historical_prices[hsp_head]))  
 
+    #BBif historical_prices[hsp_head]['BNB' + PAIR_WITH]['time'] > datetime.now() - timedelta(minutes=float(TIME_DIFFERENCE / RECHECK_INTERVAL)):
+    if historical_prices[hsp_head][firstcoin]['time'] > datetime.now() - timedelta(minutes=float(TIME_DIFFERENCE / RECHECK_INTERVAL)):
         # sleep for exactly the amount of time required
-        time.sleep((timedelta(minutes=float(TIME_DIFFERENCE / RECHECK_INTERVAL)) - (datetime.now() - historical_prices[hsp_head]['BNB' + PAIR_WITH]['time'])).total_seconds())    
+        #BBtime.sleep((timedelta(minutes=float(TIME_DIFFERENCE / RECHECK_INTERVAL)) - (datetime.now() - historical_prices[hsp_head]['BNB' + PAIR_WITH]['time'])).total_seconds())    
+        time.sleep((timedelta(minutes=float(TIME_DIFFERENCE / RECHECK_INTERVAL)) - (datetime.now() - historical_prices[hsp_head][firstcoin]['time'])).total_seconds())    
 
     # retrieve latest prices
     last_price = get_price()
@@ -776,9 +780,10 @@ def extract_order_data(order_details):
         FILL_PRICE = float(fills['price'])
         FILL_QTY = float(fills['qty'])
         FILLS_FEE += float(fills['commission'])
+        
         # check if the fee was in BNB. If not, log a nice warning:
         if (fills['commissionAsset'] != 'BNB') and (TRADING_FEE == 0.075) and (BNB_WARNING == 0):
-            print(f"WARNING: BNB not used for trading fee, please ")
+            print(f"WARNING: BNB not used for trading fee, please enable it in Binance!")
             BNB_WARNING += 1
         # quantity of fills * price
         FILLS_TOTAL += (FILL_PRICE * FILL_QTY)
