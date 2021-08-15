@@ -1,6 +1,6 @@
 """
 Olorin Sledge Fork
-Version: 1.14
+Version: 1.15
 
 Disclaimer
 
@@ -30,6 +30,7 @@ Functionality:
 - A history.txt that records state of bot every minute (useful for past analysis /charting)
 - Better error trapping on certain exceptions
 - BNB is no longer used as the reference for TIME_DIFFERENCE, this allows one to not have it in their tickers.txt list.
+
 """
 
 # use for environment variables
@@ -336,8 +337,8 @@ def balance_report(last_price):
 
         exposure_calcuated = exposure_calcuated + round(float(coins_bought[coin]['bought_at']) * float(coins_bought[coin]['volume']),0)
 
-        #PriceChangeIncFees_Perc = float(((LastPrice+sellFee) - (BuyPrice+buyFee)) / (BuyPrice+buyFee) * 100)
-        PriceChangeIncFees_Total = float(((LastPrice+sellFee) - (BuyPrice+buyFee)) * coins_bought[coin]['volume'])
+        #PriceChangeIncFees_Total = float(((LastPrice+sellFee) - (BuyPrice+buyFee)) * coins_bought[coin]['volume'])
+        PriceChangeIncFees_Total = float(((LastPrice-sellFee) - (BuyPrice+buyFee)) * coins_bought[coin]['volume'])
 
         # unrealised_session_profit_incfees_perc = float(unrealised_session_profit_incfees_perc + PriceChangeIncFees_Perc)
         unrealised_session_profit_incfees_total = float(unrealised_session_profit_incfees_total + PriceChangeIncFees_Total)
@@ -610,8 +611,10 @@ def sell_coins(tpsl_override = False):
         buyFeeTotal = (coins_bought[coin]['volume'] * BuyPrice) * (TRADING_FEE/100)
         
         PriceChange_Perc = float((LastPrice - BuyPrice) / BuyPrice * 100)
-        PriceChangeIncFees_Perc = float(((LastPrice+sellFee) - (BuyPrice+buyFee)) / (BuyPrice+buyFee) * 100)
-        PriceChangeIncFees_Unit = float((LastPrice+sellFee) - (BuyPrice+buyFee))
+        #PriceChangeIncFees_Perc = float(((LastPrice+sellFee) - (BuyPrice+buyFee)) / (BuyPrice+buyFee) * 100)
+        PriceChangeIncFees_Perc = float(((LastPrice-sellFee) - (BuyPrice+buyFee)) / (BuyPrice+buyFee) * 100)
+        #PriceChangeIncFees_Unit = float((LastPrice+sellFee) - (BuyPrice+buyFee))
+        PriceChangeIncFees_Unit = float((LastPrice-sellFee) - (BuyPrice+buyFee))
 
         # define stop loss and take profit
         TP = float(coins_bought[coin]['bought_at']) + ((float(coins_bought[coin]['bought_at']) * (coins_bought[coin]['take_profit']) / 100))
@@ -712,7 +715,8 @@ def sell_coins(tpsl_override = False):
                     priceChange = float((LastPrice - BuyPrice) / BuyPrice * 100)
 
                     # update this from the actual Binance sale information
-                    PriceChangeIncFees_Unit = float((LastPrice+sellFee) - (BuyPrice+buyFee))
+                    #PriceChangeIncFees_Unit = float((LastPrice+sellFee) - (BuyPrice+buyFee))
+                    PriceChangeIncFees_Unit = float((LastPrice-sellFee) - (BuyPrice+buyFee))
                 else:
                     coins_sold[coin] = coins_bought[coin]
 
@@ -737,7 +741,8 @@ def sell_coins(tpsl_override = False):
                 
                 #TRADE_TOTAL*PriceChangeIncFees_Perc)/100
                 
-                if (LastPrice+sellFee) >= (BuyPrice+buyFee):
+                #if (LastPrice+sellFee) >= (BuyPrice+buyFee):
+                if (LastPrice-sellFee) >= (BuyPrice+buyFee):
                     trade_wins += 1
                 else:
                     trade_losses += 1
@@ -841,7 +846,8 @@ def check_total_session_profit(coins_bought, last_price):
         BuyPrice = float(coins_bought[coin]['bought_at'])
         buyFee = (BuyPrice * (TRADING_FEE/100))
         
-        PriceChangeIncFees_Total = float(((LastPrice+sellFee) - (BuyPrice+buyFee)) * coins_bought[coin]['volume'])
+        #PriceChangeIncFees_Total = float(((LastPrice+sellFee) - (BuyPrice+buyFee)) * coins_bought[coin]['volume'])
+        PriceChangeIncFees_Total = float(((LastPrice-sellFee) - (BuyPrice+buyFee)) * coins_bought[coin]['volume'])
 
         unrealised_session_profit_incfees_total = float(unrealised_session_profit_incfees_total + PriceChangeIncFees_Total)
 
