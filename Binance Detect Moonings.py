@@ -1,6 +1,6 @@
 """
 Olorin Sledge Fork
-Version: 1.15
+Version: 1.16
 
 Disclaimer
 
@@ -232,7 +232,12 @@ def wait_for_price():
 
         threshold_check = (-1.0 if min_price[coin]['time'] > max_price[coin]['time'] else 1.0) * (float(max_price[coin]['price']) - float(min_price[coin]['price'])) / float(min_price[coin]['price']) * 100
 
+        # FOR NEGATIVE PRICE CHECKING
+        #if threshold_check>0 and CHANGE_IN_PRICE<0: threshold_check=0
+
         # each coin with higher gains than our CHANGE_IN_PRICE is added to the volatile_coins dict if less than TRADE_SLOTS is not reached.
+        # FOR NEGATIVE PRICE CHECKING
+        #if abs(threshold_check) > abs(CHANGE_IN_PRICE):
         if threshold_check > CHANGE_IN_PRICE:
             coins_up +=1
 
@@ -605,7 +610,8 @@ def sell_coins(tpsl_override = False):
         LastPrice = float(last_price[coin]['price'])
         sellFee = (LastPrice * (TRADING_FEE/100))
         sellFeeTotal = (coins_bought[coin]['volume'] * LastPrice) * (TRADING_FEE/100)
-        
+        LastPriceLessFees = LastPrice - sellFee
+
         BuyPrice = float(coins_bought[coin]['bought_at'])
         buyFee = (BuyPrice * (TRADING_FEE/100))
         buyFeeTotal = (coins_bought[coin]['volume'] * BuyPrice) * (TRADING_FEE/100)
@@ -622,19 +628,23 @@ def sell_coins(tpsl_override = False):
 
         # check that the price is above the take profit and readjust SL and TP accordingly if trialing stop loss used
         
-        if LastPrice > TP and USE_TRAILING_STOP_LOSS and not sell_all_coins and not tpsl_override:
+        #if LastPrice > TP and USE_TRAILING_STOP_LOSS and not sell_all_coins and not tpsl_override:
+        if LastPriceLessFees > TP and USE_TRAILING_STOP_LOSS and not sell_all_coins and not tpsl_override:
             # increasing TP by TRAILING_TAKE_PROFIT (essentially next time to readjust SL)
 
-            if PriceChange_Perc >= 0.8:
+            #if PriceChange_Perc >= 0.8:
+            if PriceChangeIncFees_Perc >= 0.8:
                 # price has changed by 0.8% or greater, a big change. Make the STOP LOSS trail closely to the TAKE PROFIT
                 # so you don't lose this increase in price if it falls back
-                coins_bought[coin]['take_profit'] = PriceChange_Perc + TRAILING_TAKE_PROFIT    
+                #coins_bought[coin]['take_profit'] = PriceChange_Perc + TRAILING_TAKE_PROFIT    
+                coins_bought[coin]['take_profit'] = PriceChangeIncFees_Perc + TRAILING_TAKE_PROFIT    
                 coins_bought[coin]['stop_loss'] = coins_bought[coin]['take_profit'] - TRAILING_STOP_LOSS
             else:
                 # price has changed by less than 0.8%, a small change. Make the STOP LOSS trail loosely to the TAKE PROFIT
                 # so you don't get stopped out of the trade prematurely
                 coins_bought[coin]['stop_loss'] = coins_bought[coin]['take_profit'] - TRAILING_STOP_LOSS
-                coins_bought[coin]['take_profit'] = PriceChange_Perc + TRAILING_TAKE_PROFIT
+                #coins_bought[coin]['take_profit'] = PriceChange_Perc + TRAILING_TAKE_PROFIT
+                coins_bought[coin]['take_profit'] = PriceChangeIncFees_Perc + TRAILING_TAKE_PROFIT
 
             # we've got a negative stop loss - not good, we don't want this.
             if coins_bought[coin]['stop_loss'] <= 0:
@@ -653,17 +663,20 @@ def sell_coins(tpsl_override = False):
                 sellCoin = True
                 sell_reason = 'External Sell Signal'
         else:
-            if LastPrice < SL: 
+            #if LastPrice < SL: 
+            if LastPriceLessFees < SL: 
                 sellCoin = True
                 if USE_TRAILING_STOP_LOSS:
-                    if PriceChange_Perc >= 0:
-                        sell_reason = "TTP " + str(TP) + " reached"
+                    #if PriceChange_Perc >= 0:PriceChangeIncFees_Perc
+                    if PriceChangeIncFees_Perc >= 0:
+                        sell_reason = "TTP " + str(SL) + " reached"
                     else:
                         sell_reason = "TSL " + str(SL) + " reached"
                 else:
                     sell_reason = "SL " + str(SL) + " reached"
                 sell_reason = sell_reason 
-            if LastPrice > TP:
+            #if LastPrice > TP:
+            if LastPriceLessFees > TP:
                 sellCoin = True
                 sell_reason = "TP " + str(TP) + " reached"
             if coin in externals:
@@ -730,7 +743,8 @@ def sell_coins(tpsl_override = False):
                 #BB profit = ((LastPrice - BuyPrice) * coins_sold[coin]['volume']) * (1-(buyFee + sellFeeTotal))                
                 profit_incfees_total = coins_sold[coin]['volume'] * PriceChangeIncFees_Unit
                 #write_log(f"Sell: {coins_sold[coin]['volume']} {coin} - {BuyPrice} - {LastPrice} Profit: {profit_incfees_total:.{decimals()}f} {PAIR_WITH} ({PriceChange_Perc:.2f}%)")
-                write_log(f"\tSell\t{coin}\t{coins_sold[coin]['volume']}\t{BuyPrice}\t{PAIR_WITH}\t{LastPrice}\t{profit_incfees_total:.{decimals()}f}\t{PriceChange_Perc:.2f}\t{sell_reason}")
+                #write_log(f"\tSell\t{coin}\t{coins_sold[coin]['volume']}\t{BuyPrice}\t{PAIR_WITH}\t{LastPrice}\t{profit_incfees_total:.{decimals()}f}\t{PriceChange_Perc:.2f}\t{sell_reason}")
+                write_log(f"\tSell\t{coin}\t{coins_sold[coin]['volume']}\t{BuyPrice}\t{PAIR_WITH}\t{LastPrice}\t{profit_incfees_total:.{decimals()}f}\t{PriceChangeIncFees_Perc:.2f}\t{sell_reason}")
                 
                 #this is good
                 session_profit_incfees_total = session_profit_incfees_total + profit_incfees_total
