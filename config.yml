@@ -53,10 +53,12 @@ trading_options:
   TAKE_PROFIT: .8
 
   # Use custom tickers.txt list for filtering pairs.
-  # Name of custom tickers list
   CUSTOM_LIST: True
+  # Whether to automatically reload the custom tickers list
+  CUSTOM_LIST_AUTORELOAD: True
+  # Name of custom tickers list
   TICKERS_LIST: 'tickers.txt'
-   
+     
    # whether to use trailing stop loss or not; default is True
   # when hit TAKE_PROFIT, move STOP_LOSS to TRAILING_STOP_LOSS percentage points below TAKE_PROFIT hence locking in profit
   # when hit TAKE_PROFIT, move TAKE_PROFIT up by TRAILING_TAKE_PROFIT percentage points

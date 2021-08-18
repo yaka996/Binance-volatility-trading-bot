@@ -1,6 +1,6 @@
 """
 Olorin Sledge Fork
-Version: 1.16
+Version: 1.17
 
 Disclaimer
 
@@ -30,6 +30,7 @@ Functionality:
 - A history.txt that records state of bot every minute (useful for past analysis /charting)
 - Better error trapping on certain exceptions
 - BNB is no longer used as the reference for TIME_DIFFERENCE, this allows one to not have it in their tickers.txt list.
+- Tickers list can now auto reload (if set in the config.yml file)
 
 """
 
@@ -218,19 +219,25 @@ def wait_for_price():
         time.sleep((timedelta(minutes=float(TIME_DIFFERENCE / RECHECK_INTERVAL)) - (datetime.now() - historical_prices[hsp_head][firstcoin]['time'])).total_seconds())    
 
     # retrieve latest prices
-    last_price = get_price()
-
-    # Moved to the end of this method
-    # balance_report(last_price)
+    #last_price = get_price()
+    last_price = wrap_get_price()
 
     # calculate the difference in prices
     for coin in historical_prices[hsp_head]:
-
+           
         # minimum and maximum prices over time period
-        min_price = min(historical_prices, key = lambda x: float("inf") if x is None else float(x[coin]['price']))
-        max_price = max(historical_prices, key = lambda x: -1 if x is None else float(x[coin]['price']))
+        try:
+            min_price = min(historical_prices, key = lambda x: float("inf") if x is None else float(x[coin]['price']))
+            max_price = max(historical_prices, key = lambda x: -1 if x is None else float(x[coin]['price']))
 
-        threshold_check = (-1.0 if min_price[coin]['time'] > max_price[coin]['time'] else 1.0) * (float(max_price[coin]['price']) - float(min_price[coin]['price'])) / float(min_price[coin]['price']) * 100
+            threshold_check = (-1.0 if min_price[coin]['time'] > max_price[coin]['time'] else 1.0) * (float(max_price[coin]['price']) - float(min_price[coin]['price'])) / float(min_price[coin]['price']) * 100
+
+            #if coin == "BTCUSDT" or coin == "ETHUSDT":
+                #print(f"coin: {coin} min_price: {min_price[coin]['price']} max_price: {max_price[coin]['price']}")
+        except KeyError:
+            if DEBUG:
+                print(f"wait_for_price(): Got a KeyError for {coin}. If this coin was just added to your tickers file, no need to worry about this KeyError.")
+            pass
 
         # FOR NEGATIVE PRICE CHECKING
         #if threshold_check>0 and CHANGE_IN_PRICE<0: threshold_check=0
@@ -991,7 +998,9 @@ def sell_all(msgreason, session_tspl_ovr = False):
     remove_from_portfolio(coins_sold)
     
     # display final info to screen
-    last_price = get_price()
+    #last_price = get_price()
+    last_price = wrap_get_price()
+
     discordmsg = balance_report(last_price)
     msg_discord(discordmsg)
 
@@ -1018,6 +1027,25 @@ def truncate(number, decimals=0):
 
     factor = 10.0 ** decimals
     return math.trunc(number * factor) / factor
+
+def wrap_get_price():
+    # Use CUSTOM_LIST symbols if CUSTOM_LIST is set to True
+    global tickers
+
+    if CUSTOM_LIST: 
+        if CUSTOM_LIST_AUTORELOAD:
+            while True:
+                if not os.path.exists(TICKERS_LIST):
+                    print(f"Autoreload tickers cannot find {TICKERS_LIST} file. Will retry in 1 second.")
+                    time.sleep(1)
+                else:
+                    break
+            prevcoincount = len(tickers)
+            tickers=[line.strip() for line in open(TICKERS_LIST)]
+            if DEBUG:
+                print(f"Reloaded tickers from {TICKERS_LIST} file. Prev coin count: {prevcoincount} | New coin count: {len(tickers)}")
+
+    return get_price()
 
 if __name__ == '__main__':
 
@@ -1073,6 +1101,7 @@ if __name__ == '__main__':
     #COOLOFF_PERIOD = parsed_config['trading_options']['COOLOFF_PERIOD']
 
     CUSTOM_LIST = parsed_config['trading_options']['CUSTOM_LIST']
+    CUSTOM_LIST_AUTORELOAD = parsed_config['trading_options']['CUSTOM_LIST_AUTORELOAD']
     TICKERS_LIST = parsed_config['trading_options']['TICKERS_LIST']
     
     USE_TRAILING_STOP_LOSS = parsed_config['trading_options']['USE_TRAILING_STOP_LOSS']
@@ -1216,10 +1245,14 @@ if __name__ == '__main__':
         else:
             print(f'No modules to load {SIGNALLING_MODULES}')
     except Exception as e:
-        print(f'Loading external signals exception: {e}')
+        if str(e) == "object of type 'NoneType' has no len()":
+            print(f'No external signal modules running')
+        else:
+            print(f'Loading external signals exception: {e}')
 
     # seed initial prices
-    get_price()
+    #get_price()
+    wrap_get_price() 
     TIMEOUT_COUNT=0
     READ_CONNECTERR_COUNT=0
     BINANCE_API_EXCEPTION=0
