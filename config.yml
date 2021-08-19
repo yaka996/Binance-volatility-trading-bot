@@ -55,7 +55,7 @@ trading_options:
   # Use custom tickers.txt list for filtering pairs.
   CUSTOM_LIST: True
   # Whether to automatically reload the custom tickers list
-  CUSTOM_LIST_AUTORELOAD: True
+  CUSTOM_LIST_AUTORELOAD: False
   # Name of custom tickers list
   TICKERS_LIST: 'tickers.txt'
      
