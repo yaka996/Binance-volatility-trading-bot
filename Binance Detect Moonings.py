@@ -1,6 +1,6 @@
 """
 Olorin Sledge Fork
-Version: 1.17
+Version: 1.18
 
 Disclaimer
 
@@ -31,6 +31,7 @@ Functionality:
 - Better error trapping on certain exceptions
 - BNB is no longer used as the reference for TIME_DIFFERENCE, this allows one to not have it in their tickers.txt list.
 - Tickers list can now auto reload (if set in the config.yml file)
+- Held coins displayed in a Table format
 
 """
 
@@ -73,6 +74,9 @@ from itertools import count
 
 # used to store trades and sell assets
 import json
+
+# used to display holding coins in an ascii table
+from prettytable import PrettyTable
 
 # Load helper modules
 from helpers.parameters import (
@@ -165,6 +169,13 @@ def decimals():
     else:
         return 8
 
+def print_table(table):
+    global old_out
+
+    print('')
+    sys.stdout = old_out
+    print(table)
+    sys.stdout = St_ampe_dOut()
 
 def get_price(add_to_historical=True):
     '''Return the current price for all coins on binance'''
@@ -371,7 +382,7 @@ def balance_report(last_price):
     
     print(f'')
     print(f'--------')
-    print(f'STARTED         : {bot_started_datetime} | Running for: {datetime.now() - bot_started_datetime}')
+    print(f"STARTED         : {str(bot_started_datetime).split('.')[0]} | Running for: {str(datetime.now() - bot_started_datetime).split('.')[0]}")
     print(f'CURRENT HOLDS   : {len(coins_bought)}/{TRADE_SLOTS} ({float(CURRENT_EXPOSURE):g}/{float(INVESTMENT_TOTAL):g} {PAIR_WITH})')
     print(f'Buying Paused   : {bot_paused}')
     print(f'')
@@ -388,7 +399,7 @@ def balance_report(last_price):
     print(f'')
     
     #msg1 = str(bot_started_datetime) + " | " + str(datetime.now() - bot_started_datetime)
-    msg1 = str(datetime.now())
+    msg1 = str(datetime.now()).split('.')[0]
     msg2 = " | " + str(len(coins_bought)) + "/" + str(TRADE_SLOTS) + " | PBOT: " + str(bot_paused)
     msg2 = msg2 + ' SPR%: ' + str(round(session_profit_incfees_perc,2)) + ' SPR$: ' + str(round(session_profit_incfees_total,4))
     msg2 = msg2 + ' SPU%: ' + str(round(unrealised_session_profit_incfees_perc,2)) + ' SPU$: ' + str(round(unrealised_session_profit_incfees_total,4))
@@ -613,6 +624,19 @@ def sell_coins(tpsl_override = False):
 
     BUDGET = TRADE_TOTAL * TRADE_SLOTS
     
+    # table stuff
+    my_table = PrettyTable()
+    my_table.field_names = ["Symbol", "Volume", "Bought At", "Now At", "TP %", "SL %", "Change %", "Profit $", "Time Held"]
+    my_table.align["Symbol"] = "l"
+    my_table.align["Volume"] = "r"
+    my_table.align["Bought At"] = "r"
+    my_table.align["Now At"] = "r"
+    my_table.align["TP %"] = "r"
+    my_table.align["SL %"] = "r"
+    my_table.align["Change %"] = "r"
+    my_table.align["Profit $"] = "r"
+    my_table.align["Time Held"] = "l"
+
     for coin in list(coins_bought):
         LastPrice = float(last_price[coin]['price'])
         sellFee = (LastPrice * (TRADING_FEE/100))
@@ -622,7 +646,10 @@ def sell_coins(tpsl_override = False):
         BuyPrice = float(coins_bought[coin]['bought_at'])
         buyFee = (BuyPrice * (TRADING_FEE/100))
         buyFeeTotal = (coins_bought[coin]['volume'] * BuyPrice) * (TRADING_FEE/100)
-        
+        BuyPricePlusFees = BuyPrice + buyFee
+
+        ProfitAfterFees = LastPriceLessFees - BuyPricePlusFees
+
         PriceChange_Perc = float((LastPrice - BuyPrice) / BuyPrice * 100)
         #PriceChangeIncFees_Perc = float(((LastPrice+sellFee) - (BuyPrice+buyFee)) / (BuyPrice+buyFee) * 100)
         PriceChangeIncFees_Perc = float(((LastPrice-sellFee) - (BuyPrice+buyFee)) / (BuyPrice+buyFee) * 100)
@@ -634,7 +661,6 @@ def sell_coins(tpsl_override = False):
         SL = float(coins_bought[coin]['bought_at']) + ((float(coins_bought[coin]['bought_at']) * (coins_bought[coin]['stop_loss']) / 100))
 
         # check that the price is above the take profit and readjust SL and TP accordingly if trialing stop loss used
-        
         #if LastPrice > TP and USE_TRAILING_STOP_LOSS and not sell_all_coins and not tpsl_override:
         if LastPriceLessFees > TP and USE_TRAILING_STOP_LOSS and not sell_all_coins and not tpsl_override:
             # increasing TP by TRAILING_TAKE_PROFIT (essentially next time to readjust SL)
@@ -657,13 +683,15 @@ def sell_coins(tpsl_override = False):
             if coins_bought[coin]['stop_loss'] <= 0:
                 coins_bought[coin]['stop_loss'] = coins_bought[coin]['take_profit'] * .25
                 
-            # if DEBUG: print(f"{coin} TP reached, adjusting TP {coins_bought[coin]['take_profit']:.2f}  and SL {coins_bought[coin]['stop_loss']:.2f} accordingly to lock-in profit")
-            if DEBUG: print(f"{coin} TP reached, adjusting TP {coins_bought[coin]['take_profit']:.{decimals()}f} and SL {coins_bought[coin]['stop_loss']:.{decimals()}f} accordingly to lock-in profit")
+            #if DEBUG: print(f"{coin} TP reached, adjusting TP {coins_bought[coin]['take_profit']:.{decimals()}f} and SL {coins_bought[coin]['stop_loss']:.{decimals()}f} accordingly to lock-in profit")
+            my_table.add_row([f"{txcolors.SELL_PROFIT if ProfitAfterFees >= 0. else txcolors.SELL_LOSS}{coin + ' TP up!'}{txcolors.DEFAULT}", f"{txcolors.SELL_PROFIT if ProfitAfterFees >= 0. else txcolors.SELL_LOSS}{coins_bought[coin]['volume']:.6f}{txcolors.DEFAULT}", f"{txcolors.SELL_PROFIT if ProfitAfterFees >= 0. else txcolors.SELL_LOSS}{BuyPrice:.6f}{txcolors.DEFAULT}", f"{txcolors.SELL_PROFIT if ProfitAfterFees >= 0. else txcolors.SELL_LOSS}{LastPrice:.6f}{txcolors.DEFAULT}", f"{txcolors.SELL_PROFIT if ProfitAfterFees >= 0. else txcolors.SELL_LOSS}{coins_bought[coin]['take_profit']:.4f}{txcolors.DEFAULT}", f"{txcolors.SELL_PROFIT if ProfitAfterFees >= 0. else txcolors.SELL_LOSS}{coins_bought[coin]['stop_loss']:.4f}{txcolors.DEFAULT}", f"{txcolors.SELL_PROFIT if ProfitAfterFees >= 0. else txcolors.SELL_LOSS}{PriceChangeIncFees_Perc:.4f}{txcolors.DEFAULT}", f"{txcolors.SELL_PROFIT if ProfitAfterFees >= 0. else txcolors.SELL_LOSS}{((float(coins_bought[coin]['volume'])*float(coins_bought[coin]['bought_at']))*PriceChangeIncFees_Perc)/100:.6f}{txcolors.DEFAULT}", f"{txcolors.SELL_PROFIT if ProfitAfterFees >= 0. else txcolors.SELL_LOSS}{str(timedelta(seconds=datetime.now().timestamp()-coins_bought[coin]['timestamp'])).split('.')[0]}{txcolors.DEFAULT}"])
+            
             continue
 
         # check that the price is below the stop loss or above take profit (if trailing stop loss not used) and sell if this is the case
         sellCoin = False
         sell_reason = ""
+
         if SELL_ON_SIGNAL_ONLY:
             # only sell if told to by external signal
             if coin in externals:
@@ -689,7 +717,7 @@ def sell_coins(tpsl_override = False):
             if coin in externals:
                 sellCoin = True
                 sell_reason = 'External Sell Signal'
-        
+
         if sell_all_coins:
             sellCoin = True
             sell_reason = 'Sell All Coins'
@@ -782,10 +810,17 @@ def sell_coins(tpsl_override = False):
         # no action; print once every TIME_DIFFERENCE
         if hsp_head == 1:
             if len(coins_bought) > 0:
-                #print(f"Holding: {coins_bought[coin]['volume']} of {coin} | {LastPrice} - {BuyPrice} | Profit: {txcolors.SELL_PROFIT if PriceChangeIncFees_Perc >= 0. else txcolors.SELL_LOSS}{PriceChangeIncFees_Perc:.4f}% Est: ({(TRADE_TOTAL*PriceChangeIncFees_Perc)/100:.{decimals()}f} {PAIR_WITH}){txcolors.DEFAULT}")
-                print(f"Holding: {coins_bought[coin]['volume']} of {coin} | {LastPrice} - {BuyPrice} | Profit: {txcolors.SELL_PROFIT if PriceChangeIncFees_Perc >= 0. else txcolors.SELL_LOSS}{PriceChangeIncFees_Perc:.4f}% Est: ({((float(coins_bought[coin]['volume'])*float(coins_bought[coin]['bought_at']))*PriceChangeIncFees_Perc)/100:.{decimals()}f} {PAIR_WITH}){txcolors.DEFAULT}")
-
-    if hsp_head == 1 and len(coins_bought) == 0: print(f"No trade slots are currently in use")
+                #print(f"Holding: {coins_bought[coin]['volume']} of {coin} | {LastPrice} - {BuyPrice} | Profit: {txcolors.SELL_PROFIT if PriceChangeIncFees_Perc >= 0. else txcolors.SELL_LOSS}{PriceChangeIncFees_Perc:.4f}% Est: ({((float(coins_bought[coin]['volume'])*float(coins_bought[coin]['bought_at']))*PriceChangeIncFees_Perc)/100:.{decimals()}f} {PAIR_WITH}){txcolors.DEFAULT}")
+                my_table.add_row([f"{txcolors.SELL_PROFIT if ProfitAfterFees >= 0. else txcolors.SELL_LOSS}{coin}{txcolors.DEFAULT}", f"{txcolors.SELL_PROFIT if ProfitAfterFees >= 0. else txcolors.SELL_LOSS}{coins_bought[coin]['volume']:.6f}{txcolors.DEFAULT}", f"{txcolors.SELL_PROFIT if ProfitAfterFees >= 0. else txcolors.SELL_LOSS}{BuyPrice:.6f}{txcolors.DEFAULT}", f"{txcolors.SELL_PROFIT if ProfitAfterFees >= 0. else txcolors.SELL_LOSS}{LastPrice:.6f}{txcolors.DEFAULT}", f"{txcolors.SELL_PROFIT if ProfitAfterFees >= 0. else txcolors.SELL_LOSS}{coins_bought[coin]['take_profit']:.4f}{txcolors.DEFAULT}", f"{txcolors.SELL_PROFIT if ProfitAfterFees >= 0. else txcolors.SELL_LOSS}{coins_bought[coin]['stop_loss']:.4f}{txcolors.DEFAULT}", f"{txcolors.SELL_PROFIT if ProfitAfterFees >= 0. else txcolors.SELL_LOSS}{PriceChangeIncFees_Perc:.4f}{txcolors.DEFAULT}", f"{txcolors.SELL_PROFIT if ProfitAfterFees >= 0. else txcolors.SELL_LOSS}{((float(coins_bought[coin]['volume'])*float(coins_bought[coin]['bought_at']))*PriceChangeIncFees_Perc)/100:.6f}{txcolors.DEFAULT}", f"{txcolors.SELL_PROFIT if ProfitAfterFees >= 0. else txcolors.SELL_LOSS}{str(timedelta(seconds=datetime.now().timestamp()-coins_bought[coin]['timestamp'])).split('.')[0]}{txcolors.DEFAULT}"])
+                
+    my_table.sortby = 'Change %'
+    #my_table.reversesort = True
+        
+    if len(coins_bought) == 0:
+        if hsp_head == 1:
+            print(f"No trade slots are currently in use")
+    else:
+        if len(my_table._rows) > 0: print_table(my_table)
 
     # if tpsl_override: is_bot_running = False
 
@@ -1122,6 +1157,10 @@ if __name__ == '__main__':
     # Used to push alerts, messages etc to a discord channel
     MSG_DISCORD = parsed_config['trading_options']['MSG_DISCORD']
     
+    # Trashcan settings
+    #TRASHCAN_ENABLED = parsed_config['trading_options']['TRASHCAN_ENABLED']
+    #TRASHCAN_TIME_THRESHOLD = parsed_config['trading_options']['TRASHCAN_TIME_THRESHOLD']
+
     TRADING_FEE = parsed_config['trading_options']['TRADING_FEE']
     SIGNALLING_MODULES = parsed_config['trading_options']['SIGNALLING_MODULES']
 
