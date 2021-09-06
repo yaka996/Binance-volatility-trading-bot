@@ -1,6 +1,6 @@
 """
 Olorin Sledge Fork
-Version: 1.18
+Version: 1.19
 
 Disclaimer
 
@@ -730,7 +730,7 @@ def sell_coins(tpsl_override = False):
             sell_reason = 'Sell All Coins'
         if tpsl_override:
             sellCoin = True
-            sell_reason = 'Session TPSL Override reached'
+            sell_reason = session_tpsl_override_msg
 
         if sellCoin:
             print(f"{txcolors.SELL_PROFIT if PriceChangeIncFees_Perc >= 0. else txcolors.SELL_LOSS}Sell: {coins_bought[coin]['volume']} of {coin} | {sell_reason} | ${float(LastPrice):g} - ${float(BuyPrice):g} | Profit: {PriceChangeIncFees_Perc:.2f}% Est: {((float(coins_bought[coin]['volume'])*float(coins_bought[coin]['bought_at']))*PriceChangeIncFees_Perc)/100:.{decimals()}f} {PAIR_WITH} (Inc Fees){txcolors.DEFAULT}")
@@ -919,10 +919,10 @@ def check_total_session_profit(coins_bought, last_price):
     if DEBUG: print(f'Session Override SL Feature: ASPP={allsession_profits_perc} STP {SESSION_TAKE_PROFIT} SSL {SESSION_STOP_LOSS}')
     
     if allsession_profits_perc >= float(SESSION_TAKE_PROFIT): 
-        session_tpsl_override_msg = "Session TP Override target of " + str(SESSION_TAKE_PROFIT) + "% met. Sell all coins now!"
+        session_tpsl_override_msg = "Session TP Override target of " + str(SESSION_TAKE_PROFIT) + f"% met. Sell all coins now! Session profit is {allsession_profits_perc}%"
         is_bot_running = False
     if allsession_profits_perc <= float(SESSION_STOP_LOSS):
-        session_tpsl_override_msg = "Session SL Override target of " + str(SESSION_STOP_LOSS) + "% met. Sell all coins now!"
+        session_tpsl_override_msg = "Session SL Override target of " + str(SESSION_STOP_LOSS) + f"% met. Sell all coins now! Session loss is {allsession_profits_perc}%"
         is_bot_running = False   
 
 def update_portfolio(orders, last_price, volume):
