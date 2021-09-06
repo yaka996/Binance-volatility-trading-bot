@@ -25,6 +25,7 @@ Functionality:
 - Totally reworked external signals. NOTE: you CANNOT use the default signals anymore with my bot unless you modify them to work with it
 - Sell all coins on stopping bot functionality
 - Stop bot on session profit / session stop loss trigger
+- Only sell based on an external signal i.e. Stop Loss and Take Profit are ignored
 - Discord support
 - Better reporting in trades.txt
 - A history.txt that records state of bot every minute (useful for past analysis /charting)
@@ -1082,7 +1083,11 @@ def wrap_get_price():
                 else:
                     break
             prevcoincount = len(tickers)
-            tickers=[line.strip() for line in open(TICKERS_LIST)]
+            
+            # tickers=[line.strip() for line in open(TICKERS_LIST)]
+            # Reload coins, also adding those coins that we currently hold
+            tickers=list(set([line.strip() for line in open(TICKERS_LIST)] + [coin['symbol'].removesuffix(PAIR_WITH) for coin in coins_bought.values()]))
+
             if DEBUG:
                 print(f"Reloaded tickers from {TICKERS_LIST} file. Prev coin count: {prevcoincount} | New coin count: {len(tickers)}")
 
