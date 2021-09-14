@@ -1,21 +1,20 @@
-creds.yml
-creds_usethis.yml
-trades.txt
-
 __*__
 
-# Dont upload json files
-*.json
-
-# Virtual environment
+# Ignore virtual environment
 .venv
 
-# IDE settings
+# Ignore IDE settings
 .vscode
 
-# Don't upload log files
-*.log
+# Ignore credentials file
+cred.yml
 
-# Don't upload files
+# Ignore test/live files
 test*.txt
 live*.txt
+*.log
+*.json
+
+# Ignore special files
+_*.txt
+
