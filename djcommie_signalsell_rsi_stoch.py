@@ -17,6 +17,9 @@ import numpy as np
 
 from analysis_buffer import AnalysisBuffer
 
+# my helper utils
+from helpers.os_utils import(rchop)
+
 class txcolors:
     BUY = '\033[92m'
     WARNING = '\033[93m'
@@ -87,7 +90,8 @@ def analyze(pairs):
             print (f'handler: {handler1MIN[pair]}')
             print (f'handler2: {handler5MIN[pair]}')
             with open(TRADINGVIEW_EX_FILE,'a+') as f:
-                    f.write(pair.removesuffix(PAIR_WITH) + '\n')
+                    #f.write(pair.removesuffix(PAIR_WITH) + '\n')
+                    f.write(rchop(pair, PAIR_WITH) + '\n')
             continue
 
         oscCheck=0

@@ -11,6 +11,9 @@ import glob
 import threading
 import time
 
+# my helper utils
+from helpers.os_utils import(rchop)
+
 MY_EXCHANGE = 'BINANCE'
 MY_SCREENER = 'CRYPTO'
 MY_FIRST_INTERVAL = Interval.INTERVAL_1_MINUTE
@@ -88,7 +91,8 @@ def analyze(pairs):
             print (f'Second handler: {second_handler[pair]}')
             print (f'Second handler: {third_handler[pair]}')
             with open(TRADINGVIEW_EX_FILE,'a+') as f:
-                    f.write(pair.removesuffix(PAIR_WITH) + '\n')
+                    #f.write(pair.removesuffix(PAIR_WITH) + '\n')
+                    f.write(rchop(pair, PAIR_WITH) + '\n')
             continue
                
         first_recommendation = first_analysis.summary['RECOMMENDATION']

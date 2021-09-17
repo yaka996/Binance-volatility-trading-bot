@@ -17,7 +17,7 @@ or others connected with the program.
 See requirements.txt for versions of modules needed
 
 Notes:
-- Requires Python version 3.9.x to run
+- 
 
 Functionality:
 - Changed way profit % is calculated to be based on ROI
@@ -90,6 +90,8 @@ from helpers.handle_creds import (
     load_discord_creds
 )
 
+# my helper utils
+from helpers.os_utils import(rchop)
 
 # for colourful logging to the console
 class txcolors:
@@ -568,7 +570,8 @@ def buy():
                 #if LOG_TRADES:
                 write_log(f"\tBuy\t{coin}\t{volume[coin]}\t{last_price[coin]['price']}\t{PAIR_WITH}")
                 
-                write_signallsell(coin.removesuffix(PAIR_WITH))
+                #write_signallsell(coin.removesuffix(PAIR_WITH))
+                write_signallsell(rchop(coin, PAIR_WITH))
 
                 continue
 
@@ -999,7 +1002,8 @@ def remove_from_portfolio(coins_sold):
     if os.path.exists('signalsell_tickers.txt'):
         os.remove('signalsell_tickers.txt')
         for coin in coins_bought:
-            write_signallsell(coin.removesuffix(PAIR_WITH))
+            #write_signallsell(coin.removesuffix(PAIR_WITH))
+            write_signallsell(rchop(coin, PAIR_WITH))
     
 
 def write_log(logline):
@@ -1086,7 +1090,8 @@ def wrap_get_price():
             
             # tickers=[line.strip() for line in open(TICKERS_LIST)]
             # Reload coins, also adding those coins that we currently hold
-            tickers=list(set([line.strip() for line in open(TICKERS_LIST)] + [coin['symbol'].removesuffix(PAIR_WITH) for coin in coins_bought.values()]))
+            #tickers=list(set([line.strip() for line in open(TICKERS_LIST)] + [coin['symbol'].removesuffix(PAIR_WITH) for coin in coins_bought.values()]))
+            tickers=list(set([line.strip() for line in open(TICKERS_LIST)] + [rchop(coin['symbol'], PAIR_WITH) for coin in coins_bought.values()]))
 
             if DEBUG:
                 print(f"Reloaded tickers from {TICKERS_LIST} file. Prev coin count: {prevcoincount} | New coin count: {len(tickers)}")
@@ -1095,10 +1100,10 @@ def wrap_get_price():
 
 if __name__ == '__main__':
 
-    req_version = (3,9)
-    if sys.version_info[:2] < req_version: 
-        print(f'This bot requires Python version 3.9 or higher/newer. You are running version {sys.version_info[:2]} - please upgrade your Python version!!')
-        sys.exit()
+    #req_version = (3,9)
+    #if sys.version_info[:2] < req_version: 
+    #    print(f'This bot requires Python version 3.9 or higher/newer. You are running version {sys.version_info[:2]} - please upgrade your Python version!!')
+    #    sys.exit()
 
     # Load arguments then parse settings
     args = parse_args()
