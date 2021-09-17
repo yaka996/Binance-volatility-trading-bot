@@ -16,8 +16,12 @@ or others connected with the program.
 
 See requirements.txt for versions of modules needed
 
-Notes:
-- 
+!! IMPORTANT INFORMATION ABOUT EXTERNAL SIGNAL MODULES !!
+    Please note this very important difference. If you use any external signals, they need to be modified as follows:
+    1) If it is a buy signal, you need to replace .exs with .buy so it creates a signals/whatever.buy (where "whatever" is anything you want)
+    2) If it is a sell signal, you need to replace .exs with .sell so it creates a signals/whatever.sell (where "whatever" is anything you want)
+    3) If it is a pausebot signal, you need to create a signals/pausebot.pause file
+    All these changes are within the external signal itself and is really easy to do via Find/Replace (advice you manually review any replace you do).
 
 Functionality:
 - Changed way profit % is calculated to be based on ROI
