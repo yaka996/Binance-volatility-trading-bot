@@ -646,7 +646,9 @@ def sell_coins(tpsl_override = False):
     my_table.align["Time Held"] = "l"
 
     for coin in list(coins_bought):
-        time_held = timedelta(seconds=datetime.now().timestamp()-coins_bought[coin]['timestamp'])
+        
+        #time_held = timedelta(seconds=datetime.now().timestamp()-coins_bought[coin]['timestamp'])
+        time_held = timedelta(seconds=datetime.now().timestamp()-int(str(coins_bought[coin]['timestamp'])[:10]))
 
         #if HODLMODE_ENABLED and (time_held >= HODLMODE_TIME_THRESHOLD):
         #    move_coin_to_hodl(coin)
