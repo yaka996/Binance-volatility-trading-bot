@@ -1,6 +1,6 @@
 """
 Olorin Sledge Fork
-Version: 1.19
+Version: 1.20
 
 Disclaimer
 
@@ -23,7 +23,7 @@ See requirements.txt for versions of modules needed
     3) If it is a pausebot signal, you need to create a signals/pausebot.pause file
     All these changes are within the external signal itself and is really easy to do via Find/Replace (advice you manually review any replace you do).
 
-Functionality:
+FUNCTIONALITY:
 - Changed way profit % is calculated to be based on ROI
 - More details provided on screen on state of bot (i.e.  unrealised session profit, session profit, all time profit, bot paused or not etc)
 - Totally reworked external signals. NOTE: you CANNOT use the default signals anymore with my bot unless you modify them to work with it
@@ -37,6 +37,11 @@ Functionality:
 - BNB is no longer used as the reference for TIME_DIFFERENCE, this allows one to not have it in their tickers.txt list.
 - Tickers list can now auto reload (if set in the config.yml file)
 - Held coins displayed in a Table format
+
+Added version 1.20:
+- Has a "Market Profit". This is a comparison between your bots profits and if you had just bought BTC instead when you started your bot.
+     Please note: If your bot has already been running for a period of time, you will need to manually modify your bots_stat.json and update
+     the "market_startprice" variable. This needs to be the price of BTC when your bot originally started.
 
 """
 
@@ -115,7 +120,7 @@ session_tpsl_override_msg = ""
 is_bot_running = True
 
 global historic_profit_incfees_perc, historic_profit_incfees_total, trade_wins, trade_losses
-global sell_all_coins, bot_started_datetime
+global sell_all_coins, bot_started_datetime, market_startprice, market_currprice
 
 try:
     historic_profit_incfees_perc
@@ -135,6 +140,7 @@ except NameError:
     trade_losses = 0      # or some other default value.
 
 bot_started_datetime = ""
+market_startprice = 0
 
 # print with timestamps
 old_out = sys.stdout
@@ -187,12 +193,17 @@ def print_table(table):
 def get_price(add_to_historical=True):
     '''Return the current price for all coins on binance'''
 
-    global historical_prices, hsp_head
+    global historical_prices, hsp_head, market_startprice, market_currprice
 
     initial_price = {}
     prices = client.get_all_tickers()
 
     for coin in prices:
+        
+        if coin['symbol'] == "BTC" + PAIR_WITH:
+            if market_startprice == 0:
+                market_startprice = float(coin['price'])
+            market_currprice = float(coin['price'])
 
         if CUSTOM_LIST:
             if any(item + PAIR_WITH == coin['symbol'] for item in tickers) and all(item not in coin['symbol'] for item in FIATS):
@@ -399,9 +410,11 @@ def balance_report(last_price):
     print(f'        Total   : {txcolors.SELL_PROFIT if (session_profit_incfees_perc + unrealised_session_profit_incfees_perc) > 0. else txcolors.SELL_LOSS}{session_profit_incfees_perc + unrealised_session_profit_incfees_perc:.4f}% Est:${session_profit_incfees_total+unrealised_session_profit_incfees_total:.4f} {PAIR_WITH}{txcolors.DEFAULT}')
     print(f'')
     print(f'ALL TIME DATA   :')
-    print(f'Profit          : {txcolors.SELL_PROFIT if historic_profit_incfees_perc > 0. else txcolors.SELL_LOSS}{historic_profit_incfees_perc:.4f}% Est:${historic_profit_incfees_total:.4f} {PAIR_WITH}{txcolors.DEFAULT}')
+    print(f"Market Profit   : {txcolors.SELL_PROFIT if historic_profit_incfees_perc > 0. else txcolors.SELL_LOSS}{((market_currprice - market_startprice)/ market_startprice) * 100:.4f}% (Since STARTED){txcolors.DEFAULT}")
+    print(f'Bot Profit      : {txcolors.SELL_PROFIT if historic_profit_incfees_perc > 0. else txcolors.SELL_LOSS}{historic_profit_incfees_perc:.4f}% Est:${historic_profit_incfees_total:.4f} {PAIR_WITH}{txcolors.DEFAULT}')
     print(f'Completed Trades: {trade_wins+trade_losses} (Wins:{trade_wins} Losses:{trade_losses})')
     print(f'Win Ratio       : {float(WIN_LOSS_PERCENT):g}%')
+    
     print(f'--------')
     print(f'')
     
@@ -991,6 +1004,7 @@ def update_bot_stats():
         'historicProfitIncFees_Total': historic_profit_incfees_total,
         'tradeWins': trade_wins,
         'tradeLosses': trade_losses,
+        'market_startprice': market_startprice
     }
 
     #save session info for through session portability
@@ -1258,6 +1272,10 @@ if __name__ == '__main__':
             historic_profit_incfees_total = bot_stats['historicProfitIncFees_Total']
             trade_wins = bot_stats['tradeWins']
             trade_losses = bot_stats['tradeLosses']
+            try:
+                market_startprice = bot_stats['market_startprice']
+            except:
+                pass
 
             if total_capital != total_capital_config:
                 historic_profit_incfees_perc = (historic_profit_incfees_total / total_capital_config) * 100
