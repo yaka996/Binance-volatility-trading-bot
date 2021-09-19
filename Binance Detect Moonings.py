@@ -398,6 +398,8 @@ def balance_report(last_price):
     if (trade_wins > 0) and (trade_losses == 0):
         WIN_LOSS_PERCENT = 100
     
+    market_profit = ((market_currprice - market_startprice)/ market_startprice) * 100
+
     print(f'')
     print(f'--------')
     print(f"STARTED         : {str(bot_started_datetime).split('.')[0]} | Running for: {str(datetime.now() - bot_started_datetime).split('.')[0]}")
@@ -410,7 +412,7 @@ def balance_report(last_price):
     print(f'        Total   : {txcolors.SELL_PROFIT if (session_profit_incfees_perc + unrealised_session_profit_incfees_perc) > 0. else txcolors.SELL_LOSS}{session_profit_incfees_perc + unrealised_session_profit_incfees_perc:.4f}% Est:${session_profit_incfees_total+unrealised_session_profit_incfees_total:.4f} {PAIR_WITH}{txcolors.DEFAULT}')
     print(f'')
     print(f'ALL TIME DATA   :')
-    print(f"Market Profit   : {txcolors.SELL_PROFIT if historic_profit_incfees_perc > 0. else txcolors.SELL_LOSS}{((market_currprice - market_startprice)/ market_startprice) * 100:.4f}% (Since STARTED){txcolors.DEFAULT}")
+    print(f"Market Profit   : {txcolors.SELL_PROFIT if market_profit > 0. else txcolors.SELL_LOSS}{market_profit:.4f}% (Since STARTED){txcolors.DEFAULT}")
     print(f'Bot Profit      : {txcolors.SELL_PROFIT if historic_profit_incfees_perc > 0. else txcolors.SELL_LOSS}{historic_profit_incfees_perc:.4f}% Est:${historic_profit_incfees_total:.4f} {PAIR_WITH}{txcolors.DEFAULT}')
     print(f'Completed Trades: {trade_wins+trade_losses} (Wins:{trade_wins} Losses:{trade_losses})')
     print(f'Win Ratio       : {float(WIN_LOSS_PERCENT):g}%')
