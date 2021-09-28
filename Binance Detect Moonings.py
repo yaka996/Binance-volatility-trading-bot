@@ -1,6 +1,6 @@
 """
 Olorin Sledge Fork
-Version: 1.20
+Version: 1.21
 
 Disclaimer
 
@@ -43,6 +43,9 @@ Added version 1.20:
      Please note: If your bot has already been running for a period of time, you will need to manually modify your bots_stat.json and update
      the "market_startprice" variable. This needs to be the price of BTC when your bot originally started.
 
+Added version 1.21:
+- Ability to "restart" an external signal via the RESTART_EXTSIGNALS setting. Please only use this is you know what you are doing. 99% of the time
+      you will want this to be False
 """
 
 # use for environment variables
@@ -683,9 +686,9 @@ def sell_coins(tpsl_override = False):
 
         PriceChange_Perc = float((LastPrice - BuyPrice) / BuyPrice * 100)
         #PriceChangeIncFees_Perc = float(((LastPrice+sellFee) - (BuyPrice+buyFee)) / (BuyPrice+buyFee) * 100)
-        PriceChangeIncFees_Perc = float(((LastPrice-sellFee) - (BuyPrice+buyFee)) / (BuyPrice+buyFee) * 100)
+        PriceChangeIncFees_Perc = float(((LastPriceLessFees - BuyPricePlusFees) / BuyPricePlusFees) * 100)
         #PriceChangeIncFees_Unit = float((LastPrice+sellFee) - (BuyPrice+buyFee))
-        PriceChangeIncFees_Unit = float((LastPrice-sellFee) - (BuyPrice+buyFee))
+        PriceChangeIncFees_Unit = float(LastPriceLessFees - BuyPricePlusFees)
 
         # define stop loss and take profit
         TP = float(coins_bought[coin]['bought_at']) + ((float(coins_bought[coin]['bought_at']) * (coins_bought[coin]['take_profit']) / 100))
@@ -1072,6 +1075,23 @@ def sell_all(msgreason, session_tspl_ovr = False):
     discordmsg = balance_report(last_price)
     msg_discord(discordmsg)
 
+def restart_signal_threads():
+    try:
+        for signalthread in signalthreads:
+            if any(signalthread.name in word for word in EXTSIGNAL_MODULES):
+                
+                name = signalthread.name
+                
+                print(f'Terminating thread {str(name)}')
+                signalthread.terminate()
+            
+                time.sleep(2)
+
+                start_signal_thread(name)
+    except:
+        pass
+
+
 def stop_signal_threads():
 
     try:
@@ -1080,6 +1100,45 @@ def stop_signal_threads():
             signalthread.terminate()
     except:
         pass
+
+def start_signal_threads():
+    signal_threads = []
+
+    try:
+        if len(SIGNALLING_MODULES) > 0:
+            for module in SIGNALLING_MODULES:
+                #print(f"Starting external signal: {module}")
+                # add process to a list. This is so the thread can be terminated at a later time
+                signal_threads.append(start_signal_thread(module))
+        else:
+            print(f'No modules to load {SIGNALLING_MODULES}')
+    except Exception as e:
+        if str(e) == "object of type 'NoneType' has no len()":
+            print(f'No external signal modules running')
+        else:
+            print(f'start_signal_threads(): Loading external signals exception: {e}')
+
+    return signal_threads
+
+def start_signal_thread(module):
+    try:
+        print(f'Starting {module}')
+        mymodule[module] = importlib.import_module(module)
+        # t = threading.Thread(target=mymodule[module].do_work, args=())
+        t = multiprocessing.Process(target=mymodule[module].do_work, args=())
+        t.name = module
+        t.daemon = True
+        t.start()
+        
+        time.sleep(2)
+
+        return t
+    except Exception as e:
+        if str(e) == "object of type 'NoneType' has no len()":
+            print(f'No external signal modules running')
+        else:
+            print(f'start_signal_thread(): Loading external signals exception: {e}')
+
 
 def truncate(number, decimals=0):
     """
@@ -1195,6 +1254,10 @@ if __name__ == '__main__':
     # Used to push alerts, messages etc to a discord channel
     MSG_DISCORD = parsed_config['trading_options']['MSG_DISCORD']
     
+    # Functionality to "reset / restart" external signal modules
+    RESTART_EXTSIGNALS = parsed_config['trading_options']['RESTART_EXTSIGNALS']
+    EXTSIGNAL_MODULES = parsed_config['trading_options']['EXTSIGNAL_MODULES']
+
     # Trashcan settings
     #HODLMODE_ENABLED = parsed_config['trading_options']['HODLMODE_ENABLED']
     #HODLMODE_TIME_THRESHOLD = parsed_config['trading_options']['HODLMODE_TIME_THRESHOLD']
@@ -1307,29 +1370,7 @@ if __name__ == '__main__':
     remove_external_signals('pause')
 
     # load signalling modules
-    signalthreads = []
-    try:
-        if len(SIGNALLING_MODULES) > 0:
-            for module in SIGNALLING_MODULES:
-                print(f'Starting {module}')
-                mymodule[module] = importlib.import_module(module)
-                # t = threading.Thread(target=mymodule[module].do_work, args=())
-                t = multiprocessing.Process(target=mymodule[module].do_work, args=())
-                t.name = module
-                t.daemon = True
-                t.start()
-
-                # add process to a list. This is so the thread can be terminated at a later time
-                signalthreads.append(t)
-
-                time.sleep(2)
-        else:
-            print(f'No modules to load {SIGNALLING_MODULES}')
-    except Exception as e:
-        if str(e) == "object of type 'NoneType' has no len()":
-            print(f'No external signal modules running')
-        else:
-            print(f'Loading external signals exception: {e}')
+    signalthreads = start_signal_threads()
 
     # seed initial prices
     #get_price()
@@ -1337,6 +1378,8 @@ if __name__ == '__main__':
     TIMEOUT_COUNT=0
     READ_CONNECTERR_COUNT=0
     BINANCE_API_EXCEPTION=0
+
+    thehour = datetime.now().hour
 
     while is_bot_running:
         try:
@@ -1349,6 +1392,11 @@ if __name__ == '__main__':
             coins_sold = sell_coins()
             remove_from_portfolio(coins_sold)
             update_bot_stats()
+            
+            if RESTART_EXTSIGNALS and thehour != datetime.now().hour :
+                restart_signal_threads()
+                thehour = datetime.now().hour
+
         except ReadTimeout as rt:
             TIMEOUT_COUNT += 1
             print(f'We got a timeout error from Binance. Re-loop. Connection Timeouts so far: {TIMEOUT_COUNT}')

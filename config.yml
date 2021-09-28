@@ -87,6 +87,13 @@ trading_options:
   # Discord integration
   # Used to push alerts, messages etc to a discord channel
   MSG_DISCORD: False
+
+  # This will tell the bot to restart signal modules every hour. This may be useful if for some reason you want to "reset"
+  # signal modules.
+  # In EXTSIGNAL_MODULES put the signalling module you want to restart every hour NOTE: THIS MUST EXIST IN SIGNALLING_MODULES!!!!!
+  RESTART_EXTSIGNALS: False
+  EXTSIGNAL_MODULES:
+    #- os_signalbuy_3SMAv2 
   
   SIGNALLING_MODULES:
     # NOTE: Only use the "os_xxxxxxxxx" or "nigec_xxxxxxxxx" etc signal/pause modules with this fork as 
