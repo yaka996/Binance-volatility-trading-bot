@@ -1,6 +1,6 @@
 """
 Olorin Sledge Fork
-Version: 1.21
+Version: 1.22
 
 Disclaimer
 
@@ -269,7 +269,7 @@ def wait_for_price():
         except KeyError:
             if DEBUG:
                 print(f"wait_for_price(): Got a KeyError for {coin}. If this coin was just added to your tickers file, no need to worry about this KeyError.")
-            pass
+            continue
 
         # FOR NEGATIVE PRICE CHECKING
         #if threshold_check>0 and CHANGE_IN_PRICE<0: threshold_check=0
