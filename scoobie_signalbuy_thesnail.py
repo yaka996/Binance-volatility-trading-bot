@@ -270,6 +270,7 @@ def do_work():
             time.sleep(180)
         except Exception as e:
             print(f'The Snail: Exception do_work() 1: {e}')
+            time.sleep(60)
             continue
         except KeyboardInterrupt as ki:
             continue
