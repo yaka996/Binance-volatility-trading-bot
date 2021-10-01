@@ -1,6 +1,6 @@
 """
 Olorin Sledge Fork
-Version: 1.22
+Version: 1.23
 
 Disclaimer
 
@@ -1046,13 +1046,12 @@ def write_signallsell(symbol):
         f.write(f'{symbol}\n')
 
 def remove_external_signals(fileext):
-    signals = glob.glob('signals/*.{fileext}')
+    signals = glob.glob(f'signals/*.{fileext}')
     for filename in signals:
-        for line in open(filename):
-            try:
-                os.remove(filename)
-            except:
-                if DEBUG: print(f'{txcolors.WARNING}Could not remove external signalling file {filename}{txcolors.DEFAULT}')
+        try:
+            os.remove(filename)
+        except:
+            if DEBUG: print(f'{txcolors.WARNING}Could not remove external signalling file {filename}{txcolors.DEFAULT}')
 
 def sell_all(msgreason, session_tspl_ovr = False):
     global sell_all_coins
