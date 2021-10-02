@@ -1,6 +1,6 @@
 """
 Olorin Sledge Fork
-Version: 1.23
+Version: 1.24
 
 Disclaimer
 
@@ -203,7 +203,7 @@ def get_price(add_to_historical=True):
 
     for coin in prices:
         
-        if coin['symbol'] == "BTC" + PAIR_WITH:
+        if coin['symbol'] == "BTCUSDT":
             if market_startprice == 0:
                 market_startprice = float(coin['price'])
             market_currprice = float(coin['price'])
@@ -415,7 +415,7 @@ def balance_report(last_price):
     print(f'        Total   : {txcolors.SELL_PROFIT if (session_profit_incfees_perc + unrealised_session_profit_incfees_perc) > 0. else txcolors.SELL_LOSS}{session_profit_incfees_perc + unrealised_session_profit_incfees_perc:.4f}% Est:${session_profit_incfees_total+unrealised_session_profit_incfees_total:.4f} {PAIR_WITH}{txcolors.DEFAULT}')
     print(f'')
     print(f'ALL TIME DATA   :')
-    print(f"Market Profit   : {txcolors.SELL_PROFIT if market_profit > 0. else txcolors.SELL_LOSS}{market_profit:.4f}% (Since STARTED){txcolors.DEFAULT}")
+    print(f"Market Profit   : {txcolors.SELL_PROFIT if market_profit > 0. else txcolors.SELL_LOSS}{market_profit:.4f}% (BTCUSDT Since STARTED){txcolors.DEFAULT}")
     print(f'Bot Profit      : {txcolors.SELL_PROFIT if historic_profit_incfees_perc > 0. else txcolors.SELL_LOSS}{historic_profit_incfees_perc:.4f}% Est:${historic_profit_incfees_total:.4f} {PAIR_WITH}{txcolors.DEFAULT}')
     print(f'Completed Trades: {trade_wins+trade_losses} (Wins:{trade_wins} Losses:{trade_losses})')
     print(f'Win Ratio       : {float(WIN_LOSS_PERCENT):g}%')
