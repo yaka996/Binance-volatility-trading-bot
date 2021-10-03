@@ -14,10 +14,6 @@ profit_min, profit_max  as described above
 BVT or OLORIN Fork.
 If using the Olorin fork (or a variation of it) you must set Olorin to True and BVT to False to change the signal format to work with Olorin.
 
-!!!! Windows or Unix / Linux !!!!
-If using Windows, uncomment the following 2 lines
-Line 174, Line 185 - asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
-
 Recommended config.yml settings
 CHANGE_IN_PRICE: 100
 STOP_LOSS: 100
@@ -171,7 +167,10 @@ async def get(session: aiohttp.ClientSession, url) -> dict:
 
 async def get_historical_data(ticker_list, interval, limit):
     urls = await create_urls(ticker_list=ticker_list, interval=interval, limit=limit)
-    #asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+    if os.name == 'nt':
+        # only need this line for Windows based systems
+        asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+
     async with aiohttp.ClientSession() as session:
         tasks = []
         for url in urls:
@@ -182,7 +181,10 @@ async def get_historical_data(ticker_list, interval, limit):
 
 
 def get_prices_high_low(list_coins, interval, limit):
-    #asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+    if os.name == 'nt':
+        # only need this line for Windows based systems
+        asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+
     hist_data = asyncio.run(get_historical_data(ticker_list=list_coins,
                                                 interval=interval,
                                                 limit=limit))
