@@ -15,7 +15,7 @@ BVT or OLORIN Fork.
 If using the Olorin fork (or a variation of it) you must set Olorin to True and BVT to False to change the signal format to work with Olorin.
 
 !!!! Windows or Unix / Linux !!!!
-If NOT using Windows, comment out the following 2 lines
+If using Windows, uncomment the following 2 lines
 Line 174, Line 185 - asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
 Recommended config.yml settings
