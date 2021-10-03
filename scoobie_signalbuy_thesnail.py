@@ -1,5 +1,5 @@
 """
-The Snail v 1.1
+The Snail v 1.2
 "Buy the dips! ... then wait"
 A simple signal that waits for a coin to be X% below its X day high AND below a calculated price (buy_below), then buys it.
 Change profit_min to your required potential profit amount
@@ -16,7 +16,7 @@ If using the Olorin fork (or a variation of it) you must set Olorin to True and 
 
 !!!! Windows or Unix / Linux !!!!
 If NOT using Windows, comment out the following 2 lines
-Line 162, Line 173 - asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+Line 174, Line 185 - asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
 Recommended config.yml settings
 CHANGE_IN_PRICE: 100
@@ -34,6 +34,14 @@ and Kevin.Butters for the meticulous testing and reporting
 
 Good luck, but use The Snail LIVE at your own risk - TEST TEST TEST
 
+v1.2 Update
+New colour for "The Snail is checking..." to make it easier to spot if you're scrolling through the screen to see last results
+Now does not show coins that you already hold
+Added variable to change the 'Risk'
+- It was previously hardcoded to buy at 70% below the high_price, this is now adjustable.
+- e.g. percent_below  0.7 = 70% below high_price, 0.5 = 50% below high_price
+
+
 """
 
 import os
@@ -41,6 +49,7 @@ import re
 import aiohttp
 import asyncio
 import time
+import json
 from datetime import datetime
 from binance.client import Client
 from helpers.parameters import parse_args, load_config
@@ -63,6 +72,7 @@ parsed_config = load_config(config_file)
 # Load trading vars
 PAIR_WITH = parsed_config['trading_options']['PAIR_WITH']
 EX_PAIRS = parsed_config['trading_options']['FIATS']
+TEST_MODE = parsed_config['script_options']['TEST_MODE']
 
 # Load creds for correct environment
 access_key, secret_key = load_correct_creds(parsed_creds)
@@ -81,7 +91,7 @@ if CREATE_TICKER_LIST:
 else:
     TICKERS_LIST = 'tickers.txt'
 
-LIMIT = 3
+LIMIT = 4
 INTERVAL = '1d'
 
 BVT = False
@@ -91,8 +101,10 @@ if BVT:
 else:
     signal_file_type = '.buy'
 
-profit_min = 15
+profit_min = 10
 profit_max = 100
+# change risk level:  0.7 = 70% below high_price, 0.5 = 50% below high_price
+percent_below = 0.5
 all_info = False
 # not available yet
 # extra_filter = False
@@ -159,7 +171,7 @@ async def get(session: aiohttp.ClientSession, url) -> dict:
 
 async def get_historical_data(ticker_list, interval, limit):
     urls = await create_urls(ticker_list=ticker_list, interval=interval, limit=limit)
-    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+    #asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
     async with aiohttp.ClientSession() as session:
         tasks = []
         for url in urls:
@@ -170,7 +182,7 @@ async def get_historical_data(ticker_list, interval, limit):
 
 
 def get_prices_high_low(list_coins, interval, limit):
-    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+    #asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
     hist_data = asyncio.run(get_historical_data(ticker_list=list_coins,
                                                 interval=interval,
                                                 limit=limit))
@@ -201,11 +213,22 @@ def do_work():
 
             init_price = get_price(client)
             coins = get_prices_high_low(init_price, INTERVAL, LIMIT)
-            print(f'The Snail is checking for potential profit and buy signals')
+            print(f'{TextColors.TURQUOISE}The Snail is checking for potential profit and buy signals{TextColors.DEFAULT}')
             if os.path.exists(f'signals/snail_scan{signal_file_type}'):
                 os.remove(f'signals/snail_scan{signal_file_type}')
 
             current_potential_list = []
+            held_coins_list = {}
+
+
+            if TEST_MODE:
+                coin_path = 'test_coins_bought.json'
+            else:
+                coin_path = 'live_coins_bought.json'
+            if os.path.isfile(coin_path) and os.stat(coin_path).st_size != 0:
+                with open(coin_path) as file:
+                    held_coins_list = json.load(file)
+
 
             for coin in coins:
                 if len(coins[coin]['high_price']) == LIMIT:
@@ -213,11 +236,12 @@ def do_work():
                     low_price = float(min(coins[coin]['low_price']))
                     last_price = float(init_price[coin]['price'])
 
+
                     # Calculation
                     diapason = high_price - low_price
                     potential = (low_price / high_price) * 100
                     buy_above = low_price * 1.00
-                    buy_below = high_price - (diapason * 0.7)  # if buying too high INCREASE diapason *
+                    buy_below = high_price - (diapason * percent_below)  # percent below affects Risk
                     max_potential = potential * 0.98
                     min_potential = potential * 0.6
                     safe_potential = potential - 12
@@ -225,47 +249,47 @@ def do_work():
                     current_potential = ((high_price / last_price) * 100) - 100
                     coins[coin]['current_potential'] = current_potential
 
-                    if current_potential > profit_min and current_potential < profit_max and last_price < buy_below:
+                    if profit_min < current_potential < profit_max and last_price < buy_below and coin not in held_coins_list:
                         current_potential_list.append(coins[coin])
 
-            if current_potential_list:
-                sort_list = sorted(current_potential_list, key=lambda x: x[f'current_potential'], reverse=True)
-                for i in sort_list:
-                    coin = i['symbol']
-                    current_potential = i['current_potential']
-                    last_price = float(init_price[coin]['price'])
-                    high_price = float(max(coins[coin]['high_price']))
-                    low_price = float(min(coins[coin]['low_price']))
-                    diapason = high_price - low_price
-                    potential = (low_price / high_price) * 100
-                    buy_above = low_price * 1.00
-                    buy_below = high_price - (diapason * 0.7)
-                    current_range = high_price - last_price
+                if current_potential_list:
+                    sort_list = sorted(current_potential_list, key=lambda x: x[f'current_potential'], reverse=True)
+                    for i in sort_list:
+                        coin = i['symbol']
+                        current_potential = i['current_potential']
+                        last_price = float(init_price[coin]['price'])
+                        high_price = float(max(coins[coin]['high_price']))
+                        low_price = float(min(coins[coin]['low_price']))
+                        diapason = high_price - low_price
+                        potential = (low_price / high_price) * 100
+                        buy_above = low_price * 1.00
+                        buy_below = high_price - (diapason * 0.7)
+                        current_range = high_price - last_price
 
-                    print(f'{TextColors.TURQUOISE}{coin}{TextColors.DEFAULT} Potential profit: {TextColors.TURQUOISE}{current_potential:.0f}%{TextColors.DEFAULT}')
+                        print(f'{TextColors.TURQUOISE}{coin}{TextColors.DEFAULT} Potential profit: {TextColors.TURQUOISE}{current_potential:.0f}%{TextColors.DEFAULT}')
 
-                    if all_info:
-                        print(f'\nPrice:            ${last_price:.3f}\n'
-                            f'High:             ${high_price:.3f}\n'
-                            # f'Plan: TP {TP}% TTP {TTP}%\n'
-                            f'Day Max Range:    ${diapason:.3f}\n'
-                            f'Current Range:    ${current_range:.3f} \n'
-                            # f'Daily Range:      ${diapason:.3f}\n'
-                            # f'Current Range     ${current_range:.3f} \n'
-                            # f'Potential profit before safety: {potential:.0f}%\n'
-                            f'Buy above:        ${buy_above:.3f}\n'
-                            f'Buy Below:        ${buy_below:.3f}\n'
-                            f'Potential profit: {TextColors.TURQUOISE}{current_potential:.0f}%{TextColors.DEFAULT}'
-                            # f'Max Profit {max_potential:.2f}%\n'
-                            # f'Min Profit {min_potential:.2f}%\n'
-                            )
-                    # print(f'Adding {TextColors.TURQUOISE}{coin}{TextColors.DEFAULT} to buy list')
+                        if all_info:
+                            print(f'\nPrice:            ${last_price:.3f}\n'
+                                f'High:             ${high_price:.3f}\n'
+                                # f'Plan: TP {TP}% TTP {TTP}%\n'
+                                f'Day Max Range:    ${diapason:.3f}\n'
+                                f'Current Range:    ${current_range:.3f} \n'
+                                # f'Daily Range:      ${diapason:.3f}\n'
+                                # f'Current Range     ${current_range:.3f} \n'
+                                # f'Potential profit before safety: {potential:.0f}%\n'
+                                # f'Buy above:        ${buy_above:.3f}\n'
+                                f'Buy Below:        ${buy_below:.3f}\n'
+                                f'Potential profit: {TextColors.TURQUOISE}{current_potential:.0f}%{TextColors.DEFAULT}'
+                                # f'Max Profit {max_potential:.2f}%\n'
+                                # f'Min Profit {min_potential:.2f}%\n'
+                                )
+                        # print(f'Adding {TextColors.TURQUOISE}{coin}{TextColors.DEFAULT} to buy list')
 
-                    # add to signal
-                    with open(f'signals/snail_scan{signal_file_type}', 'a+') as f:
-                        f.write(str(coin) + '\n')
-            # else:
-            # print(f'{TextColors.TURQUOISE}{coin}{TextColors.DEFAULT} may not be profitable at this time')
+                        # add to signal
+                        with open(f'signals/snail_scan{signal_file_type}', 'a+') as f:
+                            f.write(str(coin) + '\n')
+                # else:
+                # print(f'{TextColors.TURQUOISE}{coin}{TextColors.DEFAULT} may not be profitable at this time')
 
             time.sleep(180)
         except Exception as e:
