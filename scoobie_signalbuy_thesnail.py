@@ -101,7 +101,7 @@ if BVT:
 else:
     signal_file_type = '.buy'
 
-profit_min = 10
+profit_min = 5
 profit_max = 100
 # change risk level:  0.7 = 70% below high_price, 0.5 = 50% below high_price
 percent_below = 0.5
@@ -224,7 +224,11 @@ def do_work():
             if TEST_MODE:
                 coin_path = 'test_coins_bought.json'
             else:
-                coin_path = 'live_coins_bought.json'
+                if BVT:
+                    coin_path = 'coins_bought.json'
+                else:
+                    coin_path = 'live_coins_bought.json'
+
             if os.path.isfile(coin_path) and os.stat(coin_path).st_size != 0:
                 with open(coin_path) as file:
                     held_coins_list = json.load(file)
