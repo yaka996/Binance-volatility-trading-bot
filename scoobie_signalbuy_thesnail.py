@@ -97,10 +97,10 @@ if BVT:
 else:
     signal_file_type = '.buy'
 
-profit_min = 5
+profit_min = 15
 profit_max = 100
 # change risk level:  0.7 = 70% below high_price, 0.5 = 50% below high_price
-percent_below = 0.5
+percent_below = 0.7
 all_info = False
 # not available yet
 # extra_filter = False
