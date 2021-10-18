@@ -118,10 +118,6 @@ def analyze(pairs):
                 with open(TRADINGVIEW_EX_FILE,'a+') as f:
                         f.write(pair.removesuffix(PAIR_WITH) + '\n')
                 continue
-                   
-            the_recommendation = the_analysis.summary['RECOMMENDATION']
-            the_recommendation_osc = the_analysis.oscillators['RECOMMENDATION']
-            the_recommendation_ma = the_analysis.moving_averages['RECOMMENDATION'] 
              
             if FULL_LOG:
                 
